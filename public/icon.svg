@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Growth Documentary">
+  <rect width="64" height="64" rx="14" fill="#151210"/>
+  <path d="M21 13v38" stroke="#F3EFE4" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="21" cy="19" r="4" fill="#F3EFE4"/>
+  <circle cx="21" cy="32" r="4" fill="#F3EFE4"/>
+  <circle cx="21" cy="45" r="5" fill="#7A2E22"/>
+  <path d="M31 19h17M31 32h13M31 45h19" stroke="#F3EFE4" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+</svg>

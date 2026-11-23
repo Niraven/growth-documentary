@@ -1,0 +1,37 @@
+name: Feature request
+description: Propose a capability that fits the product contract.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The contract: every statement in a report must link to an archived capture.
+        Revenue, traffic and causal estimates are out of scope by design.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What question can't you answer today?
+      description: Describe the research question, not the feature.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What should the report show?
+      description: The field, source and receipt you would expect next to it.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: What public source would prove it?
+      description: A URL pattern, an API, or an archive endpoint. If no public source exists, say so.
+    validations:
+      required: true
+  - type: checkboxes
+    id: contract
+    attributes:
+      label: Contract check
+      options:
+        - label: This can be shown with a dated, public capture rather than an estimate.
+          required: true

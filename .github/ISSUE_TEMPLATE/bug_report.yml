@@ -1,0 +1,55 @@
+name: Bug report
+description: Something is wrong with a report, the API or the UI.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please do not paste private URLs or credentials.
+  - type: input
+    id: target
+    attributes:
+      label: Target URL
+      description: The public page you asked about, e.g. `example.com/pricing`.
+      placeholder: example.com/pricing
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What the report should have shown, and why.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: The change row, API response or screen you got. Include the status code if it failed.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v0.2.0
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where
+      options:
+        - UI
+        - API
+        - Extraction / diff logic
+        - Docs
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked that the archive has captures for this URL.
+          required: true
+        - label: This is not a request for revenue, traffic or causal estimates (out of scope).
+          required: true

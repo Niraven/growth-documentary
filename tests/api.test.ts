@@ -57,6 +57,44 @@ describe('api handler', () => {
     await api(req, res)
     expect(state.status).toBe(200)
     expect(JSON.parse(state.body).ok).toBe(true)
+    expect(JSON.parse(state.body).version).toBe('0.3.0')
+  })
+
+  it('returns site info and caches it', async () => {
+    const fetchImpl: FetchLike = async (url) => {
+      if (url.includes('/cdx/search/cdx')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [
+            ['urlkey', 'timestamp', 'original'],
+            ['com,example)/sitemap.xml', '20240601120000', 'https://example.com/sitemap.xml'],
+          ],
+          text: async () => '',
+        }
+      }
+      if (url.includes('sitemap.xml')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => null,
+          text: async () =>
+            '<urlset><url><loc>https://example.com/a</loc><lastmod>2024-01-01</lastmod></url></urlset>',
+        }
+      }
+      return { ok: false, status: 404, json: async () => null, text: async () => '' }
+    }
+    const api = createApi({ fetchImpl })
+    const first = fakeExchange('/site?url=example.com')
+    await api(first.req, first.res)
+    expect(first.state.status).toBe(200)
+    expect(JSON.parse(first.state.body).pages).toBe(1)
+    expect(first.state.headers['x-cache']).toBe('miss')
+
+    const second = fakeExchange('/site?url=example.com')
+    await api(second.req, second.res)
+    expect(second.state.status).toBe(200)
+    expect(second.state.headers['x-cache']).toBe('hit')
   })
 
   it('rejects a missing url with 400', async () => {

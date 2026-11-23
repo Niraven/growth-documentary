@@ -8,7 +8,7 @@
 Paste a pricing page. Get a timeline of what changed on it, with the archived page behind every line. No estimates, no causal claims, no dashboard — just receipts you can quote.
 
 ```
-basecamp.com/pricing → 12 captures → 5 visible changes → link to the page that proves each one
+basecamp.com/pricing → 17 of 392 listed captures → 10 field changes → a link that proves each one
 ```
 
 ![Growth Documentary showing a dated timeline for a pricing page](docs/screenshot.png)
@@ -37,7 +37,13 @@ Reports are shareable: `/?url=slack.com/pricing` re-runs the same archive query 
 
 Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
-## What it reads
+## What a report contains
+
+**Coverage.** The period the report actually covers, how many captures were read, how many the index listed, and a strip that marks every capture read and every day a change was found. Gaps are visible on purpose: the space between dots is unread, not unchanged.
+
+**Changes.** Consecutive readable captures are compared field by field. The first row is the baseline, not a change. Same-day field changes are grouped under one date.
+
+**Site size.** In parallel, the site's archived sitemap is read for a page count and — when the site publishes `lastmod` dates — additions per month. When those dates cluster into one month, the panel says so instead of drawing a growth curve the data cannot support.
 
 For each capture it extracts three things:
 
@@ -56,6 +62,8 @@ Then it compares consecutive captures and keeps only observed differences. A fie
 - It does not know the exact day of a change — only that the page looked different by the next capture.
 - It does not read pages behind a login or a paywall.
 - It does not render a visual diff. Text fields only.
+- It does not know a complete page count: the sitemap figure is what the site published, captured on a given date.
+- It does not claim the sampled captures are every capture. The index is capped at 400 and the report shows what it read.
 
 Those limits are deliberate. A tool that guesses is worse than a tool that says "I only know these three things".
 
@@ -63,6 +71,7 @@ Those limits are deliberate. A tool that guesses is worse than a tool that says 
 
 ```http
 GET /api/timeline?url=stripe.com/pricing
+GET /api/site?url=stripe.com/pricing
 GET /api/health
 ```
 
@@ -80,9 +89,34 @@ GET /api/health
     { "ts": "20200101000000", "label": "1 Jan 2020", "field": "first capture", "before": "", "after": "Pricing", "url": "https://web.archive.org/web/20200101000000/example.com/pricing" },
     { "ts": "20240104213453", "label": "4 Jan 2024", "field": "price", "before": "$79/mo", "after": "$99/mo", "url": "https://web.archive.org/web/20240104213453/example.com/pricing" }
   ],
+  "coverage": {
+    "from": "20200101000000",
+    "to": "20240104213453",
+    "months": 49,
+    "sampled": 2,
+    "available": 2,
+    "strategy": "adaptive"
+  },
   "checkedAt": "2026-11-24T03:00:00.000Z"
 }
 ```
+
+`GET /api/site` answers with the sitemap layer, independently of the timeline:
+
+```json
+{
+  "domain": "example.com",
+  "sitemapUrl": "https://example.com/sitemap.xml",
+  "archivedAt": "2024-06-01",
+  "pages": 171,
+  "dated": 171,
+  "months": [{ "month": "2024-05", "added": 170 }],
+  "children": 0,
+  "note": "Archived sitemap captured 1 Jun 2024."
+}
+```
+
+When no sitemap is archived, `sitemapUrl` is `null`, counts are zero and `note` says why. The timeline never depends on this call.
 
 Status codes: `400` invalid target, `404` nothing archived, `429` rate limited (8 reports/minute per client), `502` archive unreachable or unreadable, `504` archive timeout. Successful reports are cached in memory for 10 minutes (`x-cache: hit|miss`).
 
@@ -93,12 +127,14 @@ The quota keys on the socket address. Behind a reverse proxy every user shares t
 ```
 shared/timeline.ts   the report contract and boundary guards, used by both sides
 src/                 React 19 UI (Vite, Tailwind 4, Radix, shadcn-style primitives)
-  components/        report, live report, how-it-works, design sheet
+  components/        report, coverage strip, site panel, empty state, how-it-works
 server/
-  core.ts            pure extraction + diff + fetch orchestration (no HTTP)
-  api.ts             request handler: validation, rate limit, cache
+  archive.ts         the only outbound transport: CDX + snapshots, origin-locked
+  core.ts            pure extraction, diff and adaptive sampling (no HTTP)
+  site.ts            sitemap read, also through the archive
+  api.ts             request handler: validation, rate limit, two caches
   plugin.ts          mounts the same handler on dev and preview servers
-tests/               unit tests for extraction, diff, validation and the handler
+tests/               extraction, sampling, sitemap, contract and handler tests
 ```
 
 The API is a Vite plugin with `configureServer` **and** `configurePreviewServer`, so `pnpm dev` and `pnpm start` run identical server code. `server/core.ts` has no framework imports and is tested directly.
@@ -112,9 +148,9 @@ Data source: [Internet Archive Wayback Machine](https://web.archive.org/) CDX + 
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 50 unit tests (vitest) |
+| `pnpm test` | 71 unit tests (vitest) |
 | `pnpm lint` | oxlint |
-| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.2.0) |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.3.0) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting

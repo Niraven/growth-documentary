@@ -1,38 +1,21 @@
 /**
- * Pure timeline logic. No HTTP, no Vite, no globals — everything here is
- * unit-testable and safe to import from a server, a script or a test.
+ * Pure timeline logic. No HTTP framework, no Vite, no globals — everything
+ * here is unit-testable and safe to import from a server, a script or a test.
  */
 
 import { parse } from 'parse5'
 
-import type { Capture, Change, ChangeField, Timeline } from '../shared/timeline.js'
+import type { Capture, Change, ChangeField, Coverage, Timeline } from '../shared/timeline.js'
+import {
+  ArchiveClient,
+  TimelineError,
+  captureUrl,
+  snapshotUrl,
+  type FetchLike,
+} from './archive.js'
 
-export type { Capture, Change, ChangeField, Timeline }
-
-export class TimelineError extends Error {
-  status: number
-  constructor(message: string, status = 400) {
-    super(message)
-    this.name = 'TimelineError'
-    this.status = status
-  }
-}
-
-export type FetchLike = (
-  url: string,
-  init?: {
-    signal?: AbortSignal
-    headers?: Record<string, string>
-    redirect?: 'follow' | 'manual'
-  },
-) => Promise<{
-  ok: boolean
-  status: number
-  url?: string
-  headers?: { get: (name: string) => string | null }
-  json: () => Promise<unknown>
-  text: () => Promise<string>
-}>
+export { TimelineError }
+export type { Capture, Change, ChangeField, FetchLike, Timeline }
 
 export type BuildOptions = {
   fetchImpl?: FetchLike
@@ -40,9 +23,9 @@ export type BuildOptions = {
   delayMs?: number
   /** Hard ceiling for the whole job. */
   timeoutMs?: number
-  /** How many CDX rows to consider. */
+  /** Most captures to read before refining around changes. */
   maxCaptures?: number
-  /** Earliest year to query. */
+  /** Earliest archive date to query, `YYYYMMDD`. */
   from?: number
 }
 
@@ -61,14 +44,27 @@ const MONTHS = [
   'Dec',
 ]
 
-const USER_AGENT = 'growth-documentary/0.2 (+https://github.com/)'
-
 /** `20240104213453` -> `4 Jan 2024`. Wayback timestamps are UTC. */
 export function labelFor(ts: string): string {
   const year = ts.slice(0, 4)
   const month = MONTHS[Number(ts.slice(4, 6)) - 1] ?? ''
   const day = Number(ts.slice(6, 8))
   return `${day} ${month} ${year}`
+}
+
+/** Inclusive month span, e.g. Jan 2024 to Jan 2024 = 1 month. */
+export function monthsBetween(from: string, to: string): number {
+  const start = Number(from.slice(0, 4)) * 12 + Number(from.slice(4, 6)) - 1
+  const end = Number(to.slice(0, 4)) * 12 + Number(to.slice(4, 6)) - 1
+  return Math.max(1, end - start + 1)
+}
+
+/** Wayback `from` value for 24 months ago, so "two years" means two years. */
+const defaultFrom = (): number => {
+  const date = new Date(Date.now() - 2 * 365.25 * 24 * 60 * 60 * 1000)
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  return Number(`${date.getUTCFullYear()}${month}${day}`)
 }
 
 type HtmlNode = {
@@ -104,7 +100,7 @@ function findTag(node: HtmlNode | undefined, tag: string): HtmlNode | undefined 
 
 const cleanText = (value: string): string => value.replace(/\s+/g, ' ').trim()
 
-const parseHtml = (html: string): HtmlNode => parse(html) as unknown as HtmlNode
+export const parseHtml = (html: string): HtmlNode => parse(html) as unknown as HtmlNode
 
 /**
  * Price-like strings on a page. Deliberately conservative: `$0.49` per-unit
@@ -115,15 +111,31 @@ export function pricesIn(html: string): string[] {
   const doc = parseHtml(html)
   const body = findTag(doc, 'body') ?? doc
   const text = cleanText(textOf(body))
-  const found = text.match(/(?:US)?\$\s?\d[\d,.]*(?:\s?\/\s?(?:mo|month|year|yr))?/gi) ?? []
+  const found =
+    text.match(/(?:US)?\$\s?\d[\d,.]*(?:\s?\/\s?(?:mo|month|year|yr))?/gi) ?? []
   const cleaned = found
-    .map((value) => value.replace(/\s+/g, ' ').trim())
+    .map((value) =>
+      value
+        .replace(/\s+/g, ' ')
+        .replace(/\$\s+/g, '$')
+        .replace(/\s*\/\s*/g, '/')
+        .trim(),
+    )
     .filter((value) => {
       const amount = Number(value.replace(/[^0-9.]/g, ''))
       return Number.isFinite(amount) && amount >= 1 && amount <= 100_000
     })
   return Array.from(new Set(cleaned)).slice(0, 6)
 }
+
+const priceAmount = (value: string): number => {
+  const amount = Number(value.replace(/[^0-9.]/g, ''))
+  return Number.isFinite(amount) ? amount : 0
+}
+
+/** Stable display order, so an order-only shuffle is not shown as a change. */
+export const sortPrices = (prices: string[]): string[] =>
+  [...prices].sort((a, b) => priceAmount(a) - priceAmount(b) || a.localeCompare(b))
 
 export function extractCapture(html: string, ts: string, archiveUrl: string): Capture {
   const doc = parseHtml(html)
@@ -137,7 +149,16 @@ export function extractCapture(html: string, ts: string, archiveUrl: string): Ca
   }
 }
 
-const LOCAL_SUFFIXES = ['.local', '.localhost', '.internal', '.home', '.lan', '.test', '.invalid', '.example']
+const LOCAL_SUFFIXES = [
+  '.local',
+  '.localhost',
+  '.internal',
+  '.home',
+  '.lan',
+  '.test',
+  '.invalid',
+  '.example',
+]
 
 function isIpLiteral(host: string): boolean {
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.startsWith('[') || host.includes(':')
@@ -249,14 +270,16 @@ export function diffCaptures(captures: Capture[]): Change[] {
     const added = capture.prices.filter((price) => !previous.prices.includes(price))
     const removed = previous.prices.filter((price) => !capture.prices.includes(price))
     // Only claim a price change when both captures actually show prices. A page
-    // that lost its pricing block is unreadable evidence, not a deletion.
+    // that lost its pricing block is unreadable evidence, not a deletion. The
+    // before/after values are the full price lists, not just the delta, so a
+    // row reads as a state change rather than an unexplained "—".
     if (previous.prices.length > 0 && capture.prices.length > 0 && (added.length || removed.length)) {
       changes.push({
         ts: capture.ts,
         label: capture.label,
         field: 'price',
-        before: removed.join(', ') || '—',
-        after: added.join(', ') || '—',
+        before: sortPrices(previous.prices).join(', '),
+        after: sortPrices(capture.prices).join(', '),
         url: capture.url,
       })
     }
@@ -265,133 +288,210 @@ export function diffCaptures(captures: Capture[]): Change[] {
   return changes
 }
 
+/**
+ * Spread `count` samples across the listed timestamps. Always keeps the first
+ * and last capture, then repeatedly adds the capture that sits furthest from
+ * everything chosen so far. This is robust to months with ten captures and
+ * months with none, which fixed-interval sampling is not.
+ */
+export function pickEven(timestamps: string[], count: number): string[] {
+  const unique = Array.from(new Set(timestamps)).sort()
+  if (count >= unique.length) return unique
+  if (count <= 0) return []
+  if (count === 1) return [unique[0]]
+
+  const chosen = new Set<number>([0, unique.length - 1])
+  const distance = new Array<number>(unique.length).fill(Number.POSITIVE_INFINITY)
+
+  const relax = (index: number) => {
+    for (let i = 0; i < unique.length; i += 1) {
+      distance[i] = Math.min(distance[i], Math.abs(i - index))
+    }
+  }
+  relax(0)
+  relax(unique.length - 1)
+
+  while (chosen.size < count) {
+    let best = -1
+    let bestDistance = -1
+    for (let i = 0; i < unique.length; i += 1) {
+      if (chosen.has(i)) continue
+      if (distance[i] > bestDistance) {
+        bestDistance = distance[i]
+        best = i
+      }
+    }
+    if (best < 0) break
+    chosen.add(best)
+    relax(best)
+  }
+
+  return Array.from(chosen)
+    .sort((a, b) => a - b)
+    .map((index) => unique[index])
+}
+
+/**
+ * Second sampling pass: for every observed change, add the capture halfway
+ * between the change and the previous sample, so the moment it happened is
+ * bracketed more tightly. Never exceeds the remaining budget.
+ */
+export function refineSelection(
+  all: string[],
+  sampled: string[],
+  changes: Change[],
+  budget: number,
+): string[] {
+  const taken = new Set(sampled)
+  const extra = new Set<string>()
+  let remaining = Math.max(0, budget - sampled.length)
+
+  for (const change of changes) {
+    if (remaining === 0) break
+    if (change.field === 'first capture') continue
+    const at = all.indexOf(change.ts)
+    if (at <= 0) continue
+    let previous = -1
+    for (let i = at - 1; i >= 0; i -= 1) {
+      if (taken.has(all[i])) {
+        previous = i
+        break
+      }
+    }
+    if (previous < 0) continue
+    const middle = all[Math.floor((previous + at) / 2)]
+    if (!middle || taken.has(middle) || extra.has(middle)) continue
+    extra.add(middle)
+    remaining -= 1
+  }
+
+  return Array.from(extra).sort()
+}
+
 /** Build the dated timeline for one public page. */
 export async function buildTimeline(raw: string, options: BuildOptions = {}): Promise<Timeline> {
   const {
     fetchImpl = globalThis.fetch as unknown as FetchLike,
-    delayMs = 250,
-    timeoutMs = 45_000,
-    maxCaptures = 12,
-    from = 2018,
+    delayMs = 120,
+    timeoutMs = 90_000,
+    maxCaptures = 24,
+    from = defaultFrom(),
   } = options
 
   const target = normaliseTarget(raw)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const client = new ArchiveClient(fetchImpl, controller.signal)
 
-  const ARCHIVE_ORIGIN = 'https://web.archive.org'
+  const abortError = () =>
+    new TimelineError('The archive took too long to answer. Try again in a minute.', 504)
 
-  // Redirects are followed by hand, one hop at a time, so an off-site
-  // redirect can never be fetched or read.
-  const getArchive = async (url: string) => {
-    let current = url
-    for (let hop = 0; hop <= 3; hop += 1) {
-      const response = await fetchImpl(current, {
-        signal: controller.signal,
-        headers: { 'user-agent': USER_AGENT },
-        redirect: 'manual',
-      })
-      if (response.status >= 300 && response.status < 400) {
-        const location = response.headers?.get('location')
-        if (!location) throw new TimelineError('Archive redirect had no location', 502)
-        const next = new URL(location, current)
-        if (next.origin !== ARCHIVE_ORIGIN) {
-          throw new TimelineError('Archive redirected off-site', 502)
-        }
-        current = next.toString()
-        continue
-      }
-      if (!response.ok) throw new TimelineError(`Archive responded ${response.status}`, 502)
-      if (response.url && new URL(response.url).origin !== ARCHIVE_ORIGIN) {
-        throw new TimelineError('Archive redirected off-site', 502)
-      }
-      return response
-    }
-    throw new TimelineError('Archive redirected too many times', 502)
-  }
-
-  const rowsFor = async (path: string, collapse: string, limit: number) => {
-    const cdx = new URL('https://web.archive.org/cdx/search/cdx')
-    cdx.searchParams.set('url', path)
-    cdx.searchParams.set('output', 'json')
-    cdx.searchParams.set('filter', 'statuscode:200')
-    cdx.searchParams.set('collapse', `timestamp:${collapse}`)
-    cdx.searchParams.set('from', String(from))
-    cdx.searchParams.set('limit', String(limit))
-    const response = await getArchive(cdx.toString())
-    const payload = (await response.json()) as unknown
-    if (!Array.isArray(payload)) {
-      throw new TimelineError('Unexpected response from the Internet Archive', 502)
-    }
-    if (payload.length > 0 && !payload.every((row) => Array.isArray(row))) {
-      throw new TimelineError('Unexpected response from the Internet Archive', 502)
-    }
-    return payload as string[][]
+  const wait = async (ms: number) => {
+    await new Promise((resolve) => setTimeout(resolve, ms))
+    if (controller.signal.aborted) throw abortError()
   }
 
   try {
-    // The full normalised URL, including any query string, so a query-specific
-    // pricing page is not silently swapped for its bare path.
-    const rows = await rowsFor(target.href, '6', maxCaptures * 2)
-    const captures: Capture[] = []
+    const rows = await client.rows({ url: target.href, collapse: '8', limit: 400, from })
 
-    const rowsToRead = rows
-      .slice(1, maxCaptures + 1)
-      .filter((row) => /^\d{14}$/.test(row[1] ?? ''))
-
-    for (const [index, row] of rowsToRead.entries()) {
+    const indexedByTs = new Map<string, string>()
+    for (const row of rows.slice(1)) {
       const ts = row[1]
-      // Cite the URL the archive actually indexed when it is valid, so the
-      // printed link and the fetched snapshot are the same page variant.
+      if (!/^\d{14}$/.test(ts ?? '')) continue
       const indexed =
         typeof row[2] === 'string' && /^https?:\/\//i.test(row[2]) ? row[2] : target.href
-      const snapshotUrl = `https://web.archive.org/web/${ts}id_/${indexed}`
+      if (!indexedByTs.has(ts)) indexedByTs.set(ts, indexed)
+    }
+
+    const available = Array.from(indexedByTs.keys()).sort()
+    if (available.length === 0) {
+      throw new TimelineError('No archived captures found for that page', 404)
+    }
+
+    const readCapture = async (ts: string): Promise<Capture | null> => {
+      const indexed = indexedByTs.get(ts) ?? target.href
       try {
-        const response = await getArchive(snapshotUrl)
+        const response = await client.get(snapshotUrl(ts, indexed))
         const html = await response.text()
-        const capture = extractCapture(html, ts, `https://web.archive.org/web/${ts}/${indexed}`)
+        const capture = extractCapture(html, ts, captureUrl(ts, indexed))
         // An empty shell is not evidence: it cannot support a before/after claim.
-        if (capture.title || capture.h1 || capture.prices.length > 0) captures.push(capture)
+        return capture.title || capture.h1 || capture.prices.length > 0 ? capture : null
       } catch (error) {
-        if ((error as Error)?.name === 'AbortError') {
-          throw new TimelineError('The archive took too long to answer. Try again in a minute.', 504)
-        }
+        if ((error as Error)?.name === 'AbortError') throw abortError()
         /* a snapshot that will not load is a gap, not a fatal error */
-      }
-      if (delayMs > 0 && index < rowsToRead.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs))
-        if (controller.signal.aborted) {
-          throw new TimelineError('The archive took too long to answer. Try again in a minute.', 504)
-        }
+        return null
       }
     }
 
+    const readMany = async (timestamps: string[]): Promise<Capture[]> => {
+      const out: Capture[] = []
+      let cursor = 0
+      // Three at a time: fast enough to feel responsive, still polite to the
+      // archive. Order is restored by the timestamp sort after each pass.
+      const workers = Array.from({ length: Math.min(3, timestamps.length) }, async () => {
+        while (cursor < timestamps.length) {
+          const index = cursor
+          cursor += 1
+          const capture = await readCapture(timestamps[index])
+          if (capture) out.push(capture)
+          if (delayMs > 0 && index < timestamps.length - 1) await wait(delayMs)
+        }
+      })
+      await Promise.all(workers)
+      return out
+    }
+
+    const budget = Math.max(2, Math.min(maxCaptures, 40))
+    const firstPass = pickEven(available, Math.min(12, budget))
+    let captures = (await readMany(firstPass)).sort((a, b) => a.ts.localeCompare(b.ts))
+
     if (captures.length === 0) {
-      if (rows.length < 2) {
-        throw new TimelineError('No archived captures found for that page', 404)
-      }
       throw new TimelineError(
         'The archive lists captures for that page but none could be read. Try again shortly.',
         502,
       )
     }
 
-    if (controller.signal.aborted) {
-      throw new TimelineError('The archive took too long to answer. Try again in a minute.', 504)
+    let changes = diffCaptures(captures)
+
+    if (budget > captures.length) {
+      const extra = refineSelection(
+        available,
+        captures.map((capture) => capture.ts),
+        changes,
+        budget,
+      )
+      if (extra.length > 0) {
+        const more = await readMany(extra)
+        if (more.length > 0) {
+          captures = [...captures, ...more].sort((a, b) => a.ts.localeCompare(b.ts))
+          changes = diffCaptures(captures)
+        }
+      }
+    }
+
+    if (controller.signal.aborted) throw abortError()
+
+    const coverage: Coverage = {
+      from: captures[0].ts,
+      to: captures[captures.length - 1].ts,
+      months: monthsBetween(captures[0].ts, captures[captures.length - 1].ts),
+      sampled: captures.length,
+      available: available.length,
+      strategy: 'adaptive',
     }
 
     return {
       domain: target.hostname,
       path: target.pathname,
       captures,
-      changes: diffCaptures(captures),
+      changes,
+      coverage,
       checkedAt: new Date().toISOString(),
     }
   } catch (error) {
     if (error instanceof TimelineError) throw error
-    if ((error as Error)?.name === 'AbortError') {
-      throw new TimelineError('The archive took too long to answer. Try again in a minute.', 504)
-    }
+    if ((error as Error)?.name === 'AbortError') throw abortError()
     throw new TimelineError('Could not reach the Internet Archive', 502)
   } finally {
     clearTimeout(timer)

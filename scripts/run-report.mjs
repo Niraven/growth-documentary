@@ -23,13 +23,19 @@ page.on('response', async (res) => {
 page.on('pageerror', (err) => console.log('PAGEERROR', err.message.slice(0, 200)))
 
 await page.goto(base, { waitUntil: 'networkidle2', timeout: 60_000 })
-await page.click('#domain')
-await page.type('#domain', domain, { delay: 10 })
-await page.evaluate(() => {
-  const form = document.querySelector('form')
-  const button = form?.querySelector('button[type=submit]')
-  if (button instanceof HTMLButtonElement) button.click()
-})
+const preset = new URL(page.url()).searchParams.get('url')
+if (!preset) {
+  await page.click('#domain')
+  await page.keyboard.down('Control')
+  await page.keyboard.press('KeyA')
+  await page.keyboard.up('Control')
+  await page.type('#domain', domain, { delay: 10 })
+  await page.evaluate(() => {
+    const form = document.querySelector('form')
+    const button = form?.querySelector('button[type=submit]')
+    if (button instanceof HTMLButtonElement) button.click()
+  })
+}
 
 const started = Date.now()
 let result = 'timeout'
@@ -49,6 +55,14 @@ while (Date.now() - started < 100_000) {
 }
 
 await new Promise((resolve) => setTimeout(resolve, 800))
+const siteStart = Date.now()
+while (Date.now() - siteStart < 8000) {
+  const loading = await page.evaluate(() =>
+    document.body.innerText.includes('Reading the archived sitemap'),
+  )
+  if (!loading) break
+  await new Promise((resolve) => setTimeout(resolve, 300))
+}
 await page.screenshot({ path: out, fullPage: true })
 console.log(JSON.stringify({ result, seconds: Math.round((Date.now() - started) / 1000), out }))
 await browser.close()

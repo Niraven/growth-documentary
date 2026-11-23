@@ -1,6 +1,6 @@
 # Product spec — Growth Documentary
 
-Status: implemented (v0.2.0). This file is the contract; the README explains usage.
+Status: implemented (v0.3.0). This file is the contract; the README explains usage.
 
 ## Problem
 
@@ -22,51 +22,68 @@ When I need to show what a competitor changed on a public page, I want a dated l
 
 **Input:** one public page URL or domain.
 
-**Output:** a timeline of up to 12 captures containing:
+**Output:** a timeline with:
 
-1. one `first capture` entry per report;
-2. `title`, `headline` and `price` changes between consecutive captures;
+1. one `first capture` baseline entry per report;
+2. `title`, `headline` and `price` changes between consecutive readable captures;
 3. for each entry: date label, field, before, after, archive URL;
-4. `checkedAt` timestamp.
+4. `coverage`: first and last readable capture, month span, captures sampled, captures listed, sampling strategy;
+5. `checkedAt` timestamp.
+
+A second endpoint, `GET /api/site`, returns the sitemap layer: page count, dated entries, additions per month, the archived copy date, and a plain note when no sitemap exists.
+
+**Sampling**
+
+- Query CDX for the exact normalised URL, query string included, from two years ago, capped at 400 rows.
+- Pick up to 12 captures with farthest-point spacing: first and last always kept, then the capture furthest from everything chosen so far.
+- Read them three at a time. Diff.
+- For every observed change, add the capture halfway between it and the previous sample, up to a budget of 24.
+- Report what was read, what was listed, and that gaps are unread.
 
 **Hard requirements**
 
 - Every displayed change links to a real capture URL.
 - No revenue, traffic, conversion or causal claims anywhere in UI copy.
 - Unreadable captures are skipped, never reported as deletions.
+- A field that is empty on either side is a gap, never a deletion.
+- Price before/after values are the full sorted lists, not a delta.
 - Invalid targets fail with a 4xx and a human sentence, before any network call.
 - Dev and production serve the same handler.
+- The only host contacted is `web.archive.org`; sitemaps are read from their archived copy.
 
-**Non-goals (v0.2)**
+**Non-goals (v0.3)**
 
 - Visual diffs of arbitrary pages.
 - Monitoring, alerts, accounts, saved reports.
-- Ad-library data.
-- Any host other than `web.archive.org`.
+- Ad-library data, hiring data, launch events.
+- Any live crawl of the target site.
 
 ## Acceptance checks
 
 | Check | Evidence |
 |---|---|
-| Pure extraction and diff | `tests/core.test.ts` (41 tests) |
-| Handler validation, cache, rate limit | `tests/api.test.ts` (9 tests) |
+| Extraction, diff, sampling | `tests/core.test.ts` (49 tests) |
+| Handler validation, cache, rate limit | `tests/api.test.ts` (10 tests) |
+| Sitemap parse and read | `tests/site.test.ts` (6 tests) |
+| Contract guards | `tests/contract.test.ts` (6 tests) |
 | Type-check + production build | `pnpm build` |
-| Live report for a real page | example run 24 Nov 2026: `?url=basecamp.com/pricing` → 12 captures, 5 visible changes |
-| Keyboard and labels | axe-core WCAG 2.1 A/AA scan of the production build: 0 violations, fixture and live report |
+| Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 field changes, 24 months |
+| Keyboard and labels | axe-core WCAG 2.1 A/AA scan: 0 violations, landing and live report |
 
 ## Architecture
 
 ```
-UI (React) → GET /api/timeline?url=…
-                │
-                ├─ normaliseTarget (validation, no I/O)
-                ├─ CDX query → capture list
-                ├─ snapshot fetch (text only) × up to 12
-                ├─ extractCapture → title / h1 / prices
-                └─ diffCaptures → changes
+UI (React) ── GET /api/timeline?url=… ──┐
+           └─ GET /api/site?url=… ──────┤
+                                        ├─ normaliseTarget (validation, no I/O)
+                                        ├─ ArchiveClient (origin-locked, manual redirects)
+                                        ├─ CDX rows → farthest-point sampling → snapshots
+                                        ├─ extractCapture → title / h1 / prices
+                                        ├─ diffCaptures → changes + coverage
+                                        └─ sitemap: archived copy → page count, months
 ```
 
-`server/core.ts` is framework-free and injectable (`fetchImpl`, `delayMs`, `timeoutMs`), which is what makes the tests deterministic.
+`server/core.ts` and `server/site.ts` are framework-free and injectable (`fetchImpl`, `delayMs`, `timeoutMs`), which is what makes the tests deterministic.
 
 ## Error taxonomy
 
@@ -78,6 +95,8 @@ UI (React) → GET /api/timeline?url=…
 | 502 | Archive unreachable | "Could not reach the Internet Archive" |
 | 504 | Archive too slow | "The archive took too long to answer." |
 
+A missing sitemap is not an error: `/api/site` returns 200 with `sitemapUrl: null` and a note.
+
 ## Roadmap gate
 
-Saved reports, weekly email and visual diffs ship only after the current report is used on a real pitch or teardown and the output is judged sufficient without edits.
+Saved reports, weekly email and visual diffs ship only after the current report is used on a real pitch or teardown and the output is judged sufficient without edits. Ad-library and hiring sources require a licensed provider and a separate spec.

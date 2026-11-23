@@ -62,11 +62,12 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
       <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">How a report is built</h2>
       <ol className="mt-4 space-y-4">
         {[
-          'You give a domain or a page URL. Nothing is installed and no account is created.',
-          'It asks the Internet Archive which captures exist for that page, then loads up to twelve of them.',
+          'You give a page URL. Nothing is installed and no account is created.',
+          'It asks the Internet Archive which captures exist for that page, then samples up to 24 of them across the last two years: evenly spaced first, then extra reads around the captures where a change appeared.',
           'From each capture it reads three things: the page title, the first headline, and every price string on the page.',
-          'It compares consecutive captures and lists only where one of those three changed.',
+          'It compares consecutive captures and lists only where one of those three changed. The first row is the baseline, not a change.',
           'Every line links to the exact archived page, so you can check it before you quote it.',
+          'In parallel it reads the site’s archived sitemap, for a page count and — when the site publishes lastmod dates — a per-month view of pages added.',
         ].map((step, index) => (
           <li key={step} className="flex gap-4">
             <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-border bg-card font-mono text-[11px]">
@@ -95,17 +96,23 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
       <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">Reading a report</h2>
       <div className="mt-4 space-y-3 text-[13.5px] leading-relaxed text-muted-foreground">
         <p>
-          <span className="font-medium text-foreground">High confidence</span> means a comparable
-          before/after pair exists and both pages were verified in the archive.
+          <span className="font-medium text-foreground">Baseline</span> is the first readable capture.
+          It is the starting point, not a change, so it does not count toward the change total.
         </p>
         <p>
-          <span className="font-medium text-foreground">Medium confidence</span> means the state is
-          observed but the exact change date is unknown, because nobody captured the page between
-          the two dates.
+          <span className="font-medium text-foreground">Coverage</span> shows every capture that was
+          read, and marks the days where at least one field changed. The space between dots is
+          unread — not unchanged.
         </p>
         <p>
-          <span className="font-medium text-foreground">A coverage gap</span> is shown as a gap, never
-          as a straight line. If the archive skipped two years, the report says so.
+          <span className="font-medium text-foreground">Site size</span> is the page count in the
+          site’s archived sitemap. lastmod dates are self-reported; when they cluster, the panel says
+          so instead of drawing a growth curve that the data cannot support.
+        </p>
+        <p>
+          <span className="font-medium text-foreground">A missing value</span> is a gap, never a
+          deletion. If a capture cannot be read, its era is skipped rather than reported as “they
+          removed it”.
         </p>
       </div>
 

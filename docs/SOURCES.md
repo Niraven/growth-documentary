@@ -42,6 +42,14 @@ question, and then under explicit constraints:
 
 Those constraints live in `server/live.ts` and are exercised in `tests/live.test.ts`.
 
+## Ad libraries
+
+Ad-library pages are not timeline sources. The UI links to the public Meta,
+Google, TikTok and LinkedIn libraries as manual, external checks; the server never
+fetches them. There is no free official API for general US commercial ads, so an
+automatic ad history would require a licensed provider with its own provenance and
+retention rules. Details: [`AD-SOURCES.md`](AD-SOURCES.md).
+
 ## Adding a source
 
 1. Write the adapter behind a narrow interface that returns captures with an

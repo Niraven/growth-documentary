@@ -23,6 +23,9 @@ const Gallery = lazy(() => import('@/components/Gallery'))
 const CompareCaptures = lazy(() =>
   import('@/components/CompareCaptures').then((module) => ({ default: module.CompareCaptures })),
 )
+const ArchivePreview = lazy(() =>
+  import('@/components/ArchivePreview').then((module) => ({ default: module.ArchivePreview })),
+)
 
 type View = 'report' | 'saved' | 'system' | 'how'
 
@@ -513,6 +516,11 @@ export default function App() {
               <div className="pt-4">
                 <LiveReport data={live} savedAt={savedAt} />
               </div>
+            )}
+            {live && !loading && (
+              <Suspense fallback={null}>
+                <ArchivePreview captures={live.captures} />
+              </Suspense>
             )}
             {live && !loading && <LivePanel report={live} />}
             {live && !loading && (

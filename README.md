@@ -85,13 +85,47 @@ The report has a **Check the live page** button. It reads the target once, on de
 
 A difference against the latest capture is labelled as a comparison fact. The dated timeline still comes from the archive alone.
 
+## Archived page view (free)
+
+Every report has an **Archived page view**: choose a capture and load the Internet
+Archive's copy inside a sandboxed frame. It is the free visual substitute for a
+paid screenshot API — no key, no account, no server-side browser.
+
+- The frame is loaded only when you press **Load archived view**.
+- It renders the archived HTML from `web.archive.org`; it is **not** a pixel-perfect
+  screenshot. Scripts, fonts or external assets may be missing, and some pages
+  refuse to render.
+- The iframe is sandboxed without top navigation or popups; this app never proxies
+  the archived page through its own server.
+- If you need a frozen image for a deck, check the capture and screenshot the frame
+  yourself. That image is your evidence, with the capture link beside it.
+
+![Archived page view of a Basecamp pricing capture](docs/archive-view.png)
+
+## Ad libraries (free, manual)
+
+The report links to the public **Meta Ad Library**, **Google Ads Transparency**,
+**TikTok Commercial Content Library** and **LinkedIn Ad Library**, pre-filled with
+the domain as a search term. The rows open in a new tab; this tool does not read or
+scrape those pages.
+
+There is no free official API for general US commercial ads. Meta's free Ad Library
+API covers political/issue ads and EU-delivered ads; Google publishes a political
+dataset, not a commercial ad API. Automatic commercial ad history therefore
+requires a licensed provider, plugged in server-side with its own provenance label.
+The free path is a manual check, not a fake dataset. Details and source limits:
+[`docs/AD-SOURCES.md`](docs/AD-SOURCES.md).
+
 ## What it does not do
 
 - It does not tell you why a change happened, or whether it worked.
 - It does not measure revenue, traffic or conversion.
 - It does not know the exact day of a change — only that the page looked different by the next capture.
 - It does not read pages behind a login or a paywall.
-- It does not render a visual diff. Text fields only.
+- It does not render a pixel-perfect screenshot or a visual pixel diff. The
+  archived page view renders archived HTML and can be incomplete.
+- It does not collect ad-library data. The ad panel is a set of public links, not
+  an ad archive or a spend estimate.
 - It does not know a complete page count: the sitemap figure is what the site published, captured on a given date.
 - It does not claim the sampled captures are every capture. The index is capped at 400 and the report shows what it read.
 - A live check cannot prove history. It is a single read of the page now, not a capture.
@@ -191,9 +225,11 @@ Rate limits per client per minute: 8 timelines, 20 sitemap reads, 4 live checks,
 shared/timeline.ts   contract, guards, snapshot comparison, used by both sides
 shared/compare.ts    word/char diff, capture comparison, monthly price parsing
 src/                 React 19 UI (Vite, Tailwind 4, Radix, shadcn-style primitives)
-  components/        report, coverage, price range, compare, saved list, live panel
+  components/        report, coverage, price range, archive view, compare, saved list, live panel
   lib/export.ts      CSV (formula-safe) and JSON downloads
   lib/citation.ts    ready-to-paste citation
+  lib/adLinks.ts     free public ad-library links (no server call)
+  lib/archiveUrl.ts  fixed Wayback URL guard for the archived-page iframe
 server/
   archive.ts         archive transport: CDX + snapshots, origin-locked
   core.ts            pure extraction, diff and adaptive sampling (no HTTP)
@@ -224,9 +260,9 @@ Source matrix, planned adapters and the inclusion rule for adding a source: [`do
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 165 unit tests (vitest) |
+| `pnpm test` | 171 unit tests (vitest) |
 | `pnpm lint` | oxlint |
-| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.5.0) |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.6.0) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting
@@ -240,11 +276,13 @@ Outbound access to `web.archive.org` is required. The optional live check adds u
 ## Roadmap
 
 - A hosted, multi-user store (the current one is deliberately one file, one process)
-- Optional licensed ad-library connector (Meta/Google) behind a provider key
-- Visual diff of archived screenshots for a requested page
+- Optional licensed ad-library connector behind a provider key; the free manual
+  links are in v0.6.0
+- Visual diff of archived screenshots for a requested page (the free archived
+  page view is in v0.6.0; a pixel diff is not)
 - More sources: hiring pages, docs changelogs, launch notes — each with its own provenance label
 
-Not started, not claimed. The current build is the one described above.
+Not started, not claimed. Each roadmap item is not claimed until it ships.
 
 ## Contributing
 

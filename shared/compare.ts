@@ -170,6 +170,34 @@ export function compareCaptures(before: Capture, after: Capture): CaptureCompari
   }
 }
 
+export type MonthlyPriceBucket = {
+  /** `YYYYMM`, the aggregation key. */
+  key: string
+  /** First day of the month, `YYYYMMDDHHmmss`, for the chart axis. */
+  ts: string
+  /** Distinct monthly amounts read in that month, ascending. */
+  values: number[]
+}
+
+/** Group monthly prices by month; several captures in a month become one bar. */
+export function monthlyBuckets(captures: Capture[]): MonthlyPriceBucket[] {
+  const buckets = new Map<string, MonthlyPriceBucket>()
+  for (const capture of captures) {
+    const values = monthlyPrices(capture.prices)
+    if (values.length === 0) continue
+    const key = capture.ts.slice(0, 6)
+    let bucket = buckets.get(key)
+    if (!bucket) {
+      bucket = { key, ts: `${key}01000000`, values: [] }
+      buckets.set(key, bucket)
+    }
+    for (const value of values) if (!bucket.values.includes(value)) bucket.values.push(value)
+  }
+  return Array.from(buckets.values())
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map((bucket) => ({ ...bucket, values: bucket.values.sort((a, b) => a - b) }))
+}
+
 /**
  * Numeric monthly prices, for the price trail. Annual, one-time and per-seat
  * amounts are deliberately excluded: plotting them against a monthly amount

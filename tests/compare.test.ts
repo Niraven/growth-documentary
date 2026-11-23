@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   charDiff,
   compareCaptures,
+  monthlyBuckets,
   monthlyPrices,
   priceDelta,
   wordDiff,
@@ -95,11 +96,25 @@ describe('compareCaptures', () => {
   })
 })
 
+describe('monthlyBuckets', () => {
+  it('groups captures by month and dedupes amounts', () => {
+    const buckets = monthlyBuckets([
+      capture({ ts: '20250115000000', prices: ['$20/mo', '$10/mo'] }),
+      capture({ ts: '20250128000000', prices: ['$10/mo', '$30/mo'] }),
+      capture({ ts: '20250301000000', prices: ['$99/yr', '$40/mo'] }),
+      capture({ ts: '20250401000000', prices: ['Call us'] }),
+    ])
+    expect(buckets.map((bucket) => bucket.key)).toEqual(['202501', '202503'])
+    expect(buckets[0].values).toEqual([10, 20, 30])
+    expect(buckets[1].values).toEqual([40])
+    expect(buckets[0].ts).toBe('20250101000000')
+  })
+})
+
 describe('monthlyPrices', () => {
   it('parses monthly amounts with commas and spacing', () => {
     expect(monthlyPrices(['$1,200 /mo', '$99 / month', '$49/mo'])).toEqual([49, 99, 1200])
   })
-
   it('excludes annual, one-time and malformed amounts', () => {
     expect(monthlyPrices(['$99/yr', '$50', 'Custom', '$0/mo'])).toEqual([])
   })

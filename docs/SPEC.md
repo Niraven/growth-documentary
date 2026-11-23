@@ -1,6 +1,6 @@
 # Product spec — Growth Documentary
 
-Status: implemented (v0.5.0). This file is the contract; the README explains usage.
+Status: implemented (v0.6.0). This file is the contract; the README explains usage.
 
 ## Problem
 
@@ -36,7 +36,9 @@ When I need to show what a competitor changed on a public page, I want a dated l
 **Derived views (client-side, no new claims):**
 
 - **Compare:** any two readable captures from the same report. Page title uses a character-level LCS; headline uses a word-level LCS; a replacement with less than 35% shared words is shown as two whole states, not an interleaved sentence. Price deltas are labelled Removed/Added.
-- **Monthly price range:** one bar per month in which monthly (`/mo`, `/month`) price strings were read. Each bar is the min–max of those strings; annual, one-time and per-seat amounts are excluded. With fewer than two such months the chart is not rendered.
+- **Monthly price range:** one bar per calendar month in which monthly (`/mo`, `/month`) price strings were read. The x-axis keeps one slot per month, so empty months are visible gaps. Each bar is the min–max of those strings; annual, one-time and per-seat amounts are excluded. A triangle above the plot marks a month with a price-change row. With fewer than two such months the chart is not rendered.
+- **Archived page view:** an opt-in sandboxed iframe of the selected capture's `web.archive.org` URL. It is a rendering of archived HTML, not a pixel screenshot, and creates no new claim. No server-side browser, no screenshot service, no proxying.
+- **Ad libraries:** four external, pre-filled links to public ad libraries (Meta, Google, TikTok, LinkedIn). The server never fetches them. They are not evidence rows and do not imply spend. There is no free official API for general US commercial ads; an optional licensed provider is the only future automatic path.
 - **Citation:** coverage window, captures read, field changes (baseline excluded), access date, source link.
 
 **Live check output:** `{ domain, path, fetchedAt, finalUrl, title, h1, prices, robots: "allowed" }`. It is not a `Capture`, has no archive timestamp, and never enters the timeline.
@@ -80,11 +82,14 @@ When I need to show what a competitor changed on a public page, I want a dated l
 - HTML only, 2 MB cap, 15 s budget, no cookies, no credentials, no JavaScript, no retries.
 - The live page is read once per click; no automatic refresh.
 
-**Non-goals (v0.4)**
+**Non-goals (v0.6)**
 
-- Visual diffs of arbitrary pages.
+- Pixel-level visual diffs of arbitrary pages. The archived page view renders
+  archived HTML; it does not compare pixels or claim a visual change.
 - Monitoring, alerts, accounts, multi-user sync.
-- Ad-library data, hiring data, launch events.
+- Ad-library ingestion or spend estimates. Manual public-library links are allowed;
+  server-side ad scraping or a licensed connector is not in this release.
+- Hiring data, launch events.
 - Using a live read as evidence of a dated change.
 
 ## Acceptance checks

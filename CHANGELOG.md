@@ -4,6 +4,57 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-11-24
+
+A free visual view, free ad-library links, and a price chart rebuilt around the
+actual reading.
+
+### Added
+
+- **Archived page view.** Every report can load the selected capture's Internet
+  Archive copy in a sandboxed iframe. It is free (no screenshot API, no key), loads
+  only on request, and states that it renders archived HTML rather than a
+  pixel-perfect screenshot. The iframe has no top navigation or popups and the app
+  never proxies the archived page.
+- **Ad libraries (manual, free).** Four external links — Meta, Google, TikTok and
+  LinkedIn — pre-filled with the domain. The server never fetches them. The panel
+  says why: no free official API returns general US commercial ads; Meta's free API
+  is political/EU, Google's dataset is political. `docs/AD-SOURCES.md` records the
+  source limits and the licensed-provider path.
+- **Price chart selection.** Click or keyboard-select any month to see its range
+  and every distinct monthly amount; the header and footer distinguish the selected
+  month from the latest month.
+
+### Changed
+
+- **Price chart rebuilt** as one bar per calendar month with one x-axis slot per
+  month. This makes empty months visible instead of compressing them away. Every
+  bar is labelled month + year, the axis uses round ticks ($0–$400 here), selected
+  bars show exact endpoint caps, and a triangle above the plot marks a month with a
+  price-change row. The band and its interpolated diagonals are gone: a range is a
+  bar, not a continuous series.
+- Price-change markers moved above the plot so they cannot be read as negative
+  prices below $0.
+
+### Fixed
+
+- Month labels no longer collapse to endpoint-only dates; every bar has a month and
+  a two-digit year.
+- Year dividers are drawn at January boundaries without floating year words over
+  unrelated bars.
+- The selected month's values are no longer drawn to the left of the bar where they
+  could be read as the previous month's.
+
+### Evidence
+
+- 171 unit tests (51 core, 15 handler, 6 sitemap, 7 store, 50 live, 5 export,
+  14 contract, 16 compare, 2 citation, 3 ad-link, 2 archive-url); `pnpm check` green.
+- axe-core WCAG 2.1 A/AA: 0 violations on the report with archived view, ad links
+  and the rebuilt chart.
+- Chart, archived view, ad panel and full report reviewed at full resolution.
+- Archived view verified against the 18 Nov 2026 Basecamp capture; the archived page
+  rendered in the sandboxed frame.
+
 ## [0.5.0] — 2026-11-24
 
 Visual evidence: compare any two captures, read a monthly price range, and cite the report.
@@ -208,6 +259,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.6.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.6.0
 [0.5.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.5.0
 [0.4.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.4.0
 [0.3.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.3.0

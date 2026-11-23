@@ -9,6 +9,9 @@ import { SiteGrowth } from '@/components/SiteGrowth'
 const PriceTrail = lazy(() =>
   import('@/components/PriceTrail').then((module) => ({ default: module.PriceTrail })),
 )
+const AdLibraryPanel = lazy(() =>
+  import('@/components/AdLibraryPanel').then((module) => ({ default: module.AdLibraryPanel })),
+)
 
 export type { LiveCapture, LiveChange, LiveData }
 
@@ -159,7 +162,7 @@ export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string
           between dots is unread — not unchanged.
         </p>
         <Suspense fallback={null}>
-          <PriceTrail captures={data.captures} />
+          <PriceTrail captures={data.captures} changes={data.changes} />
         </Suspense>
       </div>
 
@@ -207,6 +210,9 @@ export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <SiteGrowth key={`${data.domain}${data.path}`} target={`${data.domain}${data.path}`} />
+          <Suspense fallback={null}>
+            <AdLibraryPanel domain={data.domain} />
+          </Suspense>
 
           <Card>
             <CardHeader className="pb-3">

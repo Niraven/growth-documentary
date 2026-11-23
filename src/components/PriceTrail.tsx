@@ -1,10 +1,11 @@
-import { tsToMs, type Capture } from '../../shared/timeline'
-import { monthlyPrices } from '../../shared/compare'
+import { useState } from 'react'
+import type { Capture, Change } from '../../shared/timeline'
+import { monthlyBuckets } from '../../shared/compare'
 import { Card, CardContent } from '@/components/ui/card'
 
 const W = 720
-const H = 210
-const PAD = { left: 46, right: 18, top: 18, bottom: 34 }
+const H = 260
+const PAD = { left: 48, right: 18, top: 30, bottom: 58 }
 
 const money = (amount: number): string => {
   const value = Math.round(amount * 100) / 100
@@ -20,33 +21,25 @@ const monthLabel = (ts: string): string =>
     { month: 'short', year: 'numeric', timeZone: 'UTC' },
   )
 
-type Bucket = { key: string; ts: string; label: string; values: number[] }
+const shortMonth = (ts: string): string =>
+  new Date(Date.UTC(Number(ts.slice(0, 4)), Number(ts.slice(4, 6)) - 1, 1)).toLocaleDateString(
+    'en-GB',
+    { month: 'short', timeZone: 'UTC' },
+  )
 
-/**
- * One bar per month, not per capture: several captures in the same month would
- * otherwise sit on top of each other and imply a series that cannot be read.
- * Values inside a bar are the union of monthly strings read that month.
- */
-const byMonth = (captures: Capture[]): Bucket[] => {
-  const buckets = new Map<string, Bucket>()
-  for (const capture of captures) {
-    const values = monthlyPrices(capture.prices)
-    if (values.length === 0) continue
-    const key = capture.ts.slice(0, 6)
-    let bucket = buckets.get(key)
-    if (!bucket) {
-      bucket = { key, ts: `${key}01000000`, label: monthLabel(capture.ts), values: [] }
-      buckets.set(key, bucket)
-    }
-    for (const value of values) if (!bucket.values.includes(value)) bucket.values.push(value)
-  }
-  return Array.from(buckets.values())
-    .sort((a, b) => a.key.localeCompare(b.key))
-    .map((bucket) => ({ ...bucket, values: bucket.values.sort((a, b) => a - b) }))
-}
+export function PriceTrail({
+  captures,
+  changes = [],
+}: {
+  captures: Capture[]
+  changes?: Change[]
+}) {
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const series = monthlyBuckets(captures).map((bucket) => ({
+    ...bucket,
+    label: monthLabel(bucket.ts),
+  }))
 
-export function PriceTrail({ captures }: { captures: Capture[] }) {
-  const series = byMonth(captures)
   if (series.length < 2) return null
 
   const all = series.flatMap((bucket) => bucket.values)
@@ -54,30 +47,56 @@ export function PriceTrail({ captures }: { captures: Capture[] }) {
   const minValue = Math.min(...all)
   if (!Number.isFinite(maxValue) || maxValue <= 0) return null
 
-  const start = tsToMs(series[0].ts)
-  const end = tsToMs(series[series.length - 1].ts)
-  const span = Math.max(1, end - start)
   const plotW = W - PAD.left - PAD.right
   const plotH = H - PAD.top - PAD.bottom
-
+  const plotBottom = PAD.top + plotH
   const latest = series[series.length - 1]
-  const axisMax = Math.max(50, Math.ceil(maxValue / 50) * 50)
-  const step = axisMax > 200 ? 100 : 50
-  const ticks = Array.from({ length: Math.floor(axisMax / step) + 1 }, (_, index) => index * step)
-  if (ticks[ticks.length - 1] !== axisMax) ticks.push(axisMax)
+  const selected = series.find((bucket) => bucket.key === selectedKey) ?? latest
 
-  const x = (ts: string) => PAD.left + ((tsToMs(ts) - start) / span) * plotW
+  // A readable axis: 4–6 ticks, top rounded up, no broken interval at the end.
+  const rough = maxValue / 4
+  const step = rough <= 25 ? 25 : rough <= 50 ? 50 : rough <= 100 ? 100 : 200
+  const axisMax = Math.max(step, Math.ceil(maxValue / step) * step)
+  const ticks = Array.from({ length: Math.floor(axisMax / step) + 1 }, (_, index) => index * step)
+
   const y = (value: number) => PAD.top + (1 - value / axisMax) * plotH
+
+  const startYear = Number(series[0].ts.slice(0, 4))
+  const startMonth = Number(series[0].ts.slice(4, 6))
+  const endYear = Number(series[series.length - 1].ts.slice(0, 4))
+  const endMonth = Number(series[series.length - 1].ts.slice(4, 6))
+  const totalMonths = (endYear - startYear) * 12 + (endMonth - startMonth) + 1
+  const slot = plotW / Math.max(totalMonths, 1)
+  const monthIndex = (ts: string) =>
+    (Number(ts.slice(0, 4)) - startYear) * 12 + (Number(ts.slice(4, 6)) - startMonth)
+  const monthCenter = (ts: string) => PAD.left + (monthIndex(ts) + 0.5) * slot
+
+  const yearBands: { year: number; left: number; right: number }[] = []
+  for (let year = startYear; year <= endYear; year += 1) {
+    const firstIndex = Math.max(0, (year - startYear) * 12 - (startMonth - 1))
+    const lastIndex = Math.min(totalMonths - 1, (year - startYear) * 12 + (12 - startMonth))
+    if (lastIndex < firstIndex) continue
+    const left = PAD.left + firstIndex * slot
+    const right = PAD.left + (lastIndex + 1) * slot
+    yearBands.push({ year, left, right })
+  }
+
+  const priceChangeMonths = new Set(
+    changes.filter((change) => change.field === 'price').map((change) => change.ts.slice(0, 6)),
+  )
+
+  const barWidth = Math.max(4, Math.min(12, slot * 0.45))
 
   return (
     <Card className="mt-3" data-testid="price-trail">
       <CardContent className="p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            Monthly price range · by month
+            Monthly price range · USD/mo · by month
           </p>
           <p className="font-mono text-[10.5px] text-muted-foreground">
-            Latest {money(latest.values[0])}–{money(latest.values[latest.values.length - 1])}/mo
+            Selected {selected.label} · {money(selected.values[0])}–
+            {money(selected.values[selected.values.length - 1])}/mo
           </p>
         </div>
 
@@ -85,18 +104,9 @@ export function PriceTrail({ captures }: { captures: Capture[] }) {
           <svg
             viewBox={`0 0 ${W} ${H}`}
             className="h-auto w-full text-foreground"
-            role="img"
-            aria-label={`Monthly price range: ${series.length} months with monthly price strings, from ${money(minValue)} to ${money(maxValue)} per month. Each bar groups the captures read in one month and spans its lowest and highest monthly amount.`}
+            role="group"
+            aria-label={`Monthly price range: ${series.length} months with monthly price strings, from ${money(minValue)} to ${money(maxValue)} per month. Each bar spans the lowest and highest monthly amount read in that month; a triangle above the plot marks a month with a price-change row.`}
           >
-            <text
-              x={PAD.left - 8}
-              y={PAD.top - 6}
-              textAnchor="end"
-              className="fill-current font-mono text-[8.5px] text-muted-foreground"
-              fillOpacity={0.5}
-            >
-              USD/mo
-            </text>
             {ticks.map((tick) => (
               <g key={tick}>
                 <line
@@ -105,11 +115,11 @@ export function PriceTrail({ captures }: { captures: Capture[] }) {
                   y1={y(tick)}
                   y2={y(tick)}
                   stroke="currentColor"
-                  strokeOpacity={0.12}
+                  strokeOpacity={0.1}
                   strokeDasharray="2 4"
                 />
                 <text
-                  x={PAD.left - 8}
+                  x={PAD.left - 10}
                   y={y(tick) + 3}
                   textAnchor="end"
                   className="fill-current font-mono text-[9px] text-muted-foreground"
@@ -120,63 +130,191 @@ export function PriceTrail({ captures }: { captures: Capture[] }) {
               </g>
             ))}
 
-            {series.map((bucket, index) => {
-              const isLatest = index === series.length - 1
-              const cx = x(bucket.ts)
+            {Array.from({ length: totalMonths }, (_, index) => (
+              <line
+                key={`grid-${index}`}
+                x1={PAD.left + index * slot}
+                x2={PAD.left + index * slot}
+                y1={PAD.top}
+                y2={plotBottom}
+                stroke="currentColor"
+                strokeOpacity={0.045}
+              />
+            ))}
+
+            {yearBands.map(({ year, left }) => (
+              <g key={year}>
+                {left > PAD.left + 1 && (
+                  <line
+                    x1={left}
+                    x2={left}
+                    y1={PAD.top}
+                    y2={plotBottom}
+                    stroke="currentColor"
+                    strokeOpacity={0.12}
+                    strokeDasharray="2 5"
+                  />
+                )}
+              </g>
+            ))}
+
+            <line
+              x1={PAD.left}
+              x2={W - PAD.right}
+              y1={plotBottom}
+              y2={plotBottom}
+              stroke="currentColor"
+              strokeOpacity={0.3}
+            />
+
+            {series.map((bucket) => {
+              const isSelected = bucket.key === selected.key
+              const cx = monthCenter(bucket.ts)
               const low = bucket.values[0]
               const high = bucket.values[bucket.values.length - 1]
               return (
-                <g key={bucket.key}>
+                <g
+                  key={bucket.key}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  aria-label={`${bucket.label}: ${money(low)} to ${money(high)} per month, ${bucket.values.length} distinct monthly amounts`}
+                  className="cursor-pointer outline-none"
+                  onClick={() => setSelectedKey(bucket.key)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      setSelectedKey(bucket.key)
+                    }
+                  }}
+                >
                   <title>{`${bucket.label}: ${money(low)}–${money(high)}/mo`}</title>
-                  <line
-                    x1={cx}
-                    x2={cx}
-                    y1={y(low)}
-                    y2={y(high)}
+                  <rect
+                    x={cx - 10}
+                    y={y(high) - 4}
+                    width={20}
+                    height={Math.max(8, y(low) - y(high) + 8)}
+                    fill="transparent"
+                  />
+                  <rect
+                    x={cx - barWidth / 2}
+                    y={y(high)}
+                    width={barWidth}
+                    height={Math.max(1, y(low) - y(high))}
+                    fill="currentColor"
+                    fillOpacity={isSelected ? 0.5 : 0.18}
                     stroke="currentColor"
-                    strokeOpacity={isLatest ? 0.65 : 0.38}
-                    strokeWidth={isLatest ? 2.5 : 2}
+                    strokeOpacity={isSelected ? 0.8 : 0.3}
+                    strokeWidth={isSelected ? 1 : 0.5}
                   />
                   {[low, high].map((value) => (
                     <line
                       key={`cap-${value}`}
-                      x1={cx - 4}
-                      x2={cx + 4}
+                      x1={cx - barWidth / 2 - 2}
+                      x2={cx + barWidth / 2 + 2}
                       y1={y(value)}
                       y2={y(value)}
                       stroke="currentColor"
-                      strokeOpacity={isLatest ? 0.8 : 0.5}
-                      strokeWidth={1.5}
+                      strokeOpacity={isSelected ? 0.95 : 0.55}
+                      strokeWidth={1}
                     />
                   ))}
+                  <circle
+                    cx={cx}
+                    cy={y(low)}
+                    r={isSelected ? 3 : 1.5}
+                    fill="currentColor"
+                    fillOpacity={isSelected ? 0.95 : 0.5}
+                  />
+                  <circle
+                    cx={cx}
+                    cy={y(high)}
+                    r={isSelected ? 3 : 1.5}
+                    fill="currentColor"
+                    fillOpacity={isSelected ? 0.95 : 0.5}
+                  />
                 </g>
               )
             })}
 
-            <text
-              x={PAD.left}
-              y={H - 10}
-              className="fill-current font-mono text-[9px] text-muted-foreground"
-              fillOpacity={0.55}
-            >
-              {series[0].label}
-            </text>
-            <text
-              x={W - PAD.right}
-              y={H - 10}
-              textAnchor="end"
-              className="fill-current font-mono text-[9px] text-muted-foreground"
-              fillOpacity={0.55}
-            >
-              {series[series.length - 1].label}
-            </text>
+            {[...priceChangeMonths].map((key) => {
+              const bucket = series.find((entry) => entry.key === key)
+              if (!bucket) return null
+              const cx = monthCenter(bucket.ts)
+              return (
+                <g key={`change-${key}`}>
+                  <title>{`Price-change row observed in ${bucket.label}`}</title>
+                  <polygon
+                    points={`${cx},${PAD.top - 2} ${cx + 3},${PAD.top - 8} ${cx - 3},${PAD.top - 8}`}
+                    fill="currentColor"
+                    fillOpacity={0.65}
+                  />
+                </g>
+              )
+            })}
+
+            {series.map((bucket, index) => {
+              const cx = monthCenter(bucket.ts)
+              const labelEvery = series.length > 24 ? 2 : 1
+              if (index % labelEvery !== 0 && index !== series.length - 1) return null
+              const anchor =
+                index === series.length - 1 || cx > W - PAD.right - 10
+                  ? 'end'
+                  : cx < PAD.left + 10
+                    ? 'start'
+                    : 'middle'
+              return (
+                <g key={`tick-${bucket.key}`}>
+                  <line
+                    x1={cx}
+                    x2={cx}
+                    y1={plotBottom}
+                    y2={plotBottom + 3}
+                    stroke="currentColor"
+                    strokeOpacity={0.35}
+                  />
+                  <text
+                    x={cx}
+                    y={H - 20}
+                    textAnchor={anchor}
+                    className="fill-current font-mono text-[8.5px] text-muted-foreground"
+                    fillOpacity={0.65}
+                  >
+                    {shortMonth(bucket.ts)}
+                  </text>
+                  <text
+                    x={cx}
+                    y={H - 9}
+                    textAnchor={anchor}
+                    className="fill-current font-mono text-[8px] text-muted-foreground"
+                    fillOpacity={0.5}
+                  >
+                    {`'${bucket.ts.slice(2, 4)}`}
+                  </text>
+                </g>
+              )
+            })}
           </svg>
 
           <figcaption className="mt-2 max-w-2xl text-[11.5px] leading-relaxed text-muted-foreground">
-            Each bar groups the captures read in one month: its lowest and highest{' '}
-            <em>monthly</em> price string. Annual, one-time and per-seat amounts are excluded. Tiers
-            change, so this is a range per month — not a price index or a single price over time.
+            Each bar is one month: its ends are the lowest and highest <em>monthly</em> price string
+            read that month. The axis keeps one slot per month, so empty months stay empty. A
+            triangle above the plot marks a price-change row. Annual, one-time and per-seat amounts
+            are excluded. Tiers change, so this is a range per month — not a price index or a single
+            price over time.
           </figcaption>
+
+          <div className="mt-2 space-y-1" aria-live="polite">
+            <p className="text-[11.5px] text-muted-foreground">
+              Latest <span className="font-medium text-foreground">{latest.label}</span> ·{' '}
+              {money(latest.values[0])}–{money(latest.values[latest.values.length - 1])}/mo
+            </p>
+            <p className="text-[10.5px] leading-relaxed text-muted-foreground">
+              Selected {selected.label}: {money(selected.values[0])}–
+              {money(selected.values[selected.values.length - 1])}/mo · distinct monthly amounts:{' '}
+              {selected.values.map(money).join(' · ')}
+            </p>
+          </div>
 
           <table className="sr-only">
             <caption>Monthly price range by month</caption>

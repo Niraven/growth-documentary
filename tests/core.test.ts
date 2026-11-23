@@ -6,7 +6,6 @@ import {
   labelFor,
   normaliseTarget,
   pricesIn,
-  stripHtml,
   TimelineError,
   type Capture,
   type FetchLike,
@@ -26,14 +25,6 @@ describe('labelFor', () => {
   it('formats a Wayback timestamp as a UTC day', () => {
     expect(labelFor('20240104213453')).toBe('4 Jan 2024')
     expect(labelFor('20190610230932')).toBe('10 Jun 2019')
-  })
-})
-
-describe('stripHtml', () => {
-  it('removes scripts, styles and tags, and decodes common entities', () => {
-    const html =
-      '<style>.x{}</style><script>alert(1)</script><h1>Hello &amp; welcome</h1><p>Fish&nbsp;&amp;&nbsp;chips</p>'
-    expect(stripHtml(html)).toBe('Hello & welcome Fish & chips')
   })
 })
 

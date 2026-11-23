@@ -71,20 +71,6 @@ export function labelFor(ts: string): string {
   return `${day} ${month} ${year}`
 }
 
-export function stripHtml(html: string): string {
-  return html
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&#x27;|&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 type HtmlNode = {
   nodeName: string
   tagName?: string

@@ -83,13 +83,23 @@ export function stripHtml(html: string): string {
     .trim()
 }
 
+/** Remove one tag's blocks, repeatedly, so nested templates cannot leak. */
+function removeBlocks(html: string, tag: string): string {
+  const re = new RegExp(`<${tag}\\b[\\s\\S]*?<\\/${tag}>`, 'gi')
+  let out = html
+  for (let pass = 0; pass < 5; pass += 1) {
+    const next = out.replace(re, ' ')
+    if (next === out) break
+    out = next
+  }
+  return out
+}
+
 /** Only rendered markup: comments, scripts, styles and templates are noise. */
 function renderedMarkup(html: string): string {
-  return html
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<template[\s\S]*?<\/template>/gi, ' ')
+  let out = html.replace(/<!--[\s\S]*?-->/g, ' ')
+  for (const tag of ['script', 'style', 'template']) out = removeBlocks(out, tag)
+  return out
 }
 
 function pick(html: string, re: RegExp): string {
@@ -103,7 +113,7 @@ function pick(html: string, re: RegExp): string {
  * capped so a pricing table cannot flood the diff.
  */
 export function pricesIn(html: string): string[] {
-  const text = stripHtml(html)
+  const text = stripHtml(renderedMarkup(html))
   const found = text.match(/(?:US)?\$\s?\d[\d,.]*(?:\s?\/\s?(?:mo|month|year|yr))?/gi) ?? []
   const cleaned = found
     .map((value) => value.replace(/\s+/g, ' ').trim())
@@ -175,7 +185,8 @@ export function normaliseTarget(raw: string): URL {
     throw new TimelineError('Only http and https pages are supported', 400)
   }
 
-  const host = url.hostname.toLowerCase()
+  const host = url.hostname.toLowerCase().replace(/\.$/, '')
+  if (host !== url.hostname) url.hostname = host
   if (isIpLiteral(host) && isPrivateIpv4(host)) {
     throw new TimelineError('Use a public domain, not a local or private address', 400)
   }
@@ -307,7 +318,10 @@ export async function buildTimeline(raw: string, options: BuildOptions = {}): Pr
     cdx.searchParams.set('limit', String(limit))
     const response = await getArchive(cdx.toString())
     const payload = (await response.json()) as unknown
-    return Array.isArray(payload) ? (payload as string[][]) : []
+    if (!Array.isArray(payload)) {
+      throw new TimelineError('Unexpected response from the Internet Archive', 502)
+    }
+    return payload as string[][]
   }
 
   try {
@@ -316,7 +330,9 @@ export async function buildTimeline(raw: string, options: BuildOptions = {}): Pr
     const rows = await rowsFor(target.href, '6', maxCaptures * 2)
     const captures: Capture[] = []
 
-    for (const row of rows.slice(1, maxCaptures + 1)) {
+    const rowsToRead = rows.slice(1, maxCaptures + 1)
+
+    for (const [index, row] of rowsToRead.entries()) {
       const ts = row[1]
       if (!/^\d{14}$/.test(ts ?? '')) continue
       // Cite the URL the archive actually indexed when it is valid, so the
@@ -336,7 +352,12 @@ export async function buildTimeline(raw: string, options: BuildOptions = {}): Pr
         }
         /* a snapshot that will not load is a gap, not a fatal error */
       }
-      if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs))
+      if (delayMs > 0 && index < rowsToRead.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
+        if (controller.signal.aborted) {
+          throw new TimelineError('The archive took too long to answer. Try again in a minute.', 504)
+        }
+      }
     }
 
     if (captures.length === 0) {
@@ -347,6 +368,10 @@ export async function buildTimeline(raw: string, options: BuildOptions = {}): Pr
         'The archive lists captures for that page but none could be read. Try again shortly.',
         502,
       )
+    }
+
+    if (controller.signal.aborted) {
+      throw new TimelineError('The archive took too long to answer. Try again in a minute.', 504)
     }
 
     return {

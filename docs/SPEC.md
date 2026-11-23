@@ -48,8 +48,8 @@ When I need to show what a competitor changed on a public page, I want a dated l
 
 | Check | Evidence |
 |---|---|
-| Pure extraction and diff | `tests/core.test.ts` (33 tests) |
-| Handler validation, cache, rate limit | `tests/api.test.ts` (8 tests) |
+| Pure extraction and diff | `tests/core.test.ts` (39 tests) |
+| Handler validation, cache, rate limit | `tests/api.test.ts` (9 tests) |
 | Type-check + production build | `pnpm build` |
 | Live report for a real page | example run 24 Nov 2026: `?url=basecamp.com/pricing` → 12 captures, 5 visible changes |
 | Keyboard and labels | axe-core WCAG 2.1 A/AA scan of the production build: 0 violations, fixture and live report |

@@ -46,6 +46,16 @@ export function createApi(options: ApiOptions = {}) {
         if (entry.reset < now) buckets.delete(address)
       }
     }
+    // A hard ceiling: a flood of distinct clients must not grow the map without
+    // bound. Oldest entries go first; active clients keep their quota.
+    if (buckets.size >= 5000 && !buckets.has(client)) {
+      let overflow = buckets.size - 4999
+      for (const address of buckets.keys()) {
+        buckets.delete(address)
+        overflow -= 1
+        if (overflow <= 0) break
+      }
+    }
     const bucket = buckets.get(client)
     if (!bucket || bucket.reset < now) {
       buckets.set(client, { count: 1, reset: now + 60_000 })
@@ -92,7 +102,7 @@ export function createApi(options: ApiOptions = {}) {
     let key = target.trim()
     try {
       const normalised = normaliseTarget(target)
-      key = `${normalised.hostname}${normalised.pathname}${normalised.search}`
+      key = normalised.href
     } catch {
       /* invalid targets are rejected by buildTimeline below */
     }

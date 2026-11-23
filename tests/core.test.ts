@@ -54,6 +54,16 @@ describe('pricesIn', () => {
   it('returns nothing when a page has no prices', () => {
     expect(pricesIn('<h1>Talk to us</h1>')).toEqual([])
   })
+
+  it('ignores prices inside templates, scripts and comments', () => {
+    const html = `
+      <template><p>$99/mo</p></template>
+      <script>const price = "$49/mo"</script>
+      <!-- <p>$39/mo</p> -->
+      <p>$19/mo</p>
+    `
+    expect(pricesIn(html)).toEqual(['$19/mo'])
+  })
 })
 
 describe('normaliseTarget', () => {
@@ -100,6 +110,13 @@ describe('extractCapture', () => {
     const result = extractCapture('<p>hello</p>', '20200101000000', 'u')
     expect(result.title).toBe('')
     expect(result.h1).toBe('')
+  })
+
+  it('does not let a nested template hide the visible headline', () => {
+    const html =
+      '<template><h1>Hidden</h1><template></template></template><h1>Visible</h1>'
+    const result = extractCapture(html, '20200101000000', 'u')
+    expect(result.h1).toBe('Visible')
   })
 })
 
@@ -231,6 +248,8 @@ describe('buildTimeline', () => {
     '169.254.1.1',
     '100.64.0.1',
     'printer.local',
+    'printer.local.',
+    'localhost.',
     'api.internal',
     'http://[::1]/pricing',
   ])('rejects %s without a fetch', async (host) => {
@@ -310,5 +329,32 @@ describe('buildTimeline', () => {
     await expect(
       buildTimeline('example.com/pricing', { fetchImpl: mockFetch({}, rows), delayMs: 0 }),
     ).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('treats a malformed CDX response as an upstream failure, not an empty archive', async () => {
+    const malformed: FetchLike = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ error: 'nope' }),
+      text: async () => '',
+    })
+    await expect(
+      buildTimeline('example.com/pricing', { fetchImpl: malformed, delayMs: 0 }),
+    ).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('stops with 504 when the deadline passes during the inter-capture delay', async () => {
+    const rows = [
+      ['urlkey', 'timestamp'],
+      ['com,example)/pricing', '20200101000000'],
+      ['com,example)/pricing', '20210101000000'],
+    ]
+    const fast: FetchLike = async (url) =>
+      url.includes('/cdx/search')
+        ? { ok: true, status: 200, json: async () => rows, text: async () => '' }
+        : { ok: true, status: 200, json: async () => null, text: async () => '<title>P</title>' }
+    await expect(
+      buildTimeline('example.com/pricing', { fetchImpl: fast, delayMs: 50, timeoutMs: 10 }),
+    ).rejects.toMatchObject({ status: 504 })
   })
 })

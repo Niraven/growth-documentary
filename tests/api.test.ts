@@ -108,6 +108,17 @@ describe('api handler', () => {
     expect(lower.state.headers['x-cache']).toBe('miss')
   })
 
+  it('keeps scheme and port distinct in the cache', async () => {
+    const { fetchImpl } = makeFetch()
+    const api = createApi({ fetchImpl, delayMs: 0 })
+    const https = fakeExchange('/timeline?url=https://example.com/pricing')
+    await api(https.req, https.res)
+    expect(https.state.headers['x-cache']).toBe('miss')
+    const http = fakeExchange('/timeline?url=http://example.com/pricing')
+    await api(http.req, http.res)
+    expect(http.state.headers['x-cache']).toBe('miss')
+  })
+
   it('rate limits a noisy client', async () => {
     const { fetchImpl } = makeFetch()
     const api = createApi({ fetchImpl, delayMs: 0, rateLimit: 2 })

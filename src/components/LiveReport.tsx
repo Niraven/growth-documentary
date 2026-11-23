@@ -67,8 +67,8 @@ export function LiveReport({ data }: { data: LiveData }) {
           role="note"
           className="mb-4 rounded-xl border border-dashed border-border bg-card/60 px-4 py-3 text-[12.5px] leading-relaxed text-muted-foreground"
         >
-          No differences in page title, first headline or price strings across the{' '}
-          {data.captures.length} sampled captures.
+          No comparable change in the fields this tool reads — page title, first headline or price
+          strings — across the {data.captures.length} sampled captures.
         </p>
       )}
 

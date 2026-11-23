@@ -1,9 +1,7 @@
 import { ExternalLink, FileSearch, Loader2 } from 'lucide-react'
 import type { Change as LiveChange, Capture as LiveCapture, Timeline as LiveData } from '../../shared/timeline'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { EmptyState } from '@/components/ui/empty-state'
 
 export type { LiveCapture, LiveChange, LiveData }
 
@@ -55,22 +53,26 @@ export function LiveReport({ data }: { data: LiveData }) {
         </div>
       </div>
 
-      {data.changes.length <= 1 ? (
-        <EmptyState
-          title="No visible change in the captured window"
-          body="The archive has captures, but the title, first headline and price strings did not change between them. That is a finding, not a failure — the page was stable."
-          action={
-            first ? (
-              <Button variant="outline" size="sm" asChild>
-                <a href={first.url} target="_blank" rel="noreferrer">
-                  Open first capture <ExternalLink />
-                </a>
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : (
-        <ol className="border-l border-border pl-6">
+      {data.captures.length < 2 && (
+        <p
+          role="note"
+          className="mb-4 rounded-xl border border-dashed border-border bg-card/60 px-4 py-3 text-[12.5px] leading-relaxed text-muted-foreground"
+        >
+          One readable capture for this page. There is nothing to compare it against, so no change
+          can be claimed — only what the page said on that date.
+        </p>
+      )}
+      {data.captures.length > 1 && data.changes.length <= 1 && (
+        <p
+          role="note"
+          className="mb-4 rounded-xl border border-dashed border-border bg-card/60 px-4 py-3 text-[12.5px] leading-relaxed text-muted-foreground"
+        >
+          No differences in page title, first headline or price strings across the{' '}
+          {data.captures.length} sampled captures.
+        </p>
+      )}
+
+      <ol className="border-l border-border pl-6">
           {data.changes.map((change, index) => (
             <li key={`${change.ts}-${change.field}-${index}`} className="relative pb-7 last:pb-0">
               <span className="absolute -left-[31px] top-2 grid h-3 w-3 place-items-center rounded-full border border-foreground/25 bg-background">
@@ -108,7 +110,6 @@ export function LiveReport({ data }: { data: LiveData }) {
             </li>
           ))}
         </ol>
-      )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
         <div className="flex items-center gap-2 text-[12px] text-muted-foreground">

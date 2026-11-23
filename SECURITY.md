@@ -3,6 +3,7 @@
 ## Design
 
 - The server never fetches the page you type. Your input is used only to build a query against `web.archive.org` (CDX) and to construct a snapshot path. The only outbound host is `web.archive.org`.
+- Archive redirects are followed by hand, at most three hops, and a hop that leaves `web.archive.org` is refused before it is fetched.
 - No credentials, cookies or tokens are stored or required.
 - No user accounts, no database. Reports are cached in memory for 10 minutes and lost on restart.
 - The API binds to `127.0.0.1` by default and is intended for private networks.

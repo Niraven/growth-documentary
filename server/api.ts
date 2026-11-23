@@ -41,6 +41,11 @@ export function createApi(options: ApiOptions = {}) {
 
   const limited = (client: string) => {
     const now = Date.now()
+    if (buckets.size > 500) {
+      for (const [address, entry] of buckets) {
+        if (entry.reset < now) buckets.delete(address)
+      }
+    }
     const bucket = buckets.get(client)
     if (!bucket || bucket.reset < now) {
       buckets.set(client, { count: 1, reset: now + 60_000 })
@@ -82,11 +87,12 @@ export function createApi(options: ApiOptions = {}) {
     }
 
     // `basecamp.com/pricing`, `https://Basecamp.com/pricing/` and a trailing
-    // slash are the same report — cache them under one key.
-    let key = target.trim().toLowerCase()
+    // slash are the same report — cache them under one key. Path and query
+    // case is preserved: `/Plans` and `/plans` can be different pages.
+    let key = target.trim()
     try {
       const normalised = normaliseTarget(target)
-      key = `${normalised.hostname}${normalised.pathname}`.toLowerCase()
+      key = `${normalised.hostname}${normalised.pathname}${normalised.search}`
     } catch {
       /* invalid targets are rejected by buildTimeline below */
     }

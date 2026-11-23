@@ -30,9 +30,9 @@ pnpm build
 pnpm start        # http://127.0.0.1:5191
 ```
 
-Reports are shareable: `/?url=slack.com/pricing` rebuilds the same timeline on load.
+Reports are shareable: `/?url=slack.com/pricing` re-runs the same archive query for that target on load.
 
-Requirements: Node 20+ and `pnpm`. No API keys, no database, no account.
+Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 ## What it reads
 
@@ -67,19 +67,23 @@ GET /api/health
 
 ```json
 {
-  "domain": "stripe.com",
+  "domain": "example.com",
   "path": "/pricing",
   "captures": [
-    { "ts": "20240104213453", "label": "4 Jan 2024", "title": "…", "h1": "…", "prices": ["2.9% + 30¢"], "url": "https://web.archive.org/web/…" }
+    { "ts": "20200101000000", "label": "1 Jan 2020", "title": "Pricing", "h1": "Simple pricing", "prices": ["$79/mo"], "url": "https://web.archive.org/web/20200101000000/example.com/pricing" },
+    { "ts": "20240104213453", "label": "4 Jan 2024", "title": "Pricing", "h1": "Simple pricing", "prices": ["$99/mo"], "url": "https://web.archive.org/web/20240104213453/example.com/pricing" }
   ],
   "changes": [
-    { "ts": "20240104213453", "label": "4 Jan 2024", "field": "price", "before": "2.9% + 30¢", "after": "2.9% + 30¢ + …", "url": "https://web.archive.org/web/…" }
+    { "ts": "20200101000000", "label": "1 Jan 2020", "field": "first capture", "before": "", "after": "Pricing", "url": "https://web.archive.org/web/20200101000000/example.com/pricing" },
+    { "ts": "20240104213453", "label": "4 Jan 2024", "field": "price", "before": "$79/mo", "after": "$99/mo", "url": "https://web.archive.org/web/20240104213453/example.com/pricing" }
   ],
   "checkedAt": "2026-11-24T03:00:00.000Z"
 }
 ```
 
-Status codes: `400` invalid target, `404` nothing archived, `429` rate limited (8 reports/minute per client), `502` archive unreachable, `504` archive timeout. Successful reports are cached in memory for 10 minutes (`x-cache: hit|miss`).
+Status codes: `400` invalid target, `404` nothing archived, `429` rate limited (8 reports/minute per client), `502` archive unreachable or unreadable, `504` archive timeout. Successful reports are cached in memory for 10 minutes (`x-cache: hit|miss`).
+
+The quota keys on the socket address. Behind a reverse proxy every user shares the proxy's address, so either key on a trusted `X-Forwarded-For` or set the quota high enough for the whole proxy.
 
 ## Architecture
 
@@ -105,8 +109,9 @@ Data source: [Internet Archive Wayback Machine](https://web.archive.org/) CDX + 
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 28 unit tests (vitest) |
+| `pnpm test` | 41 unit tests (vitest) |
 | `pnpm lint` | oxlint |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.2.0) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting

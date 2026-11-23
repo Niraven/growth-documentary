@@ -18,10 +18,16 @@ export class TimelineError extends Error {
 
 export type FetchLike = (
   url: string,
-  init?: { signal?: AbortSignal; headers?: Record<string, string> },
+  init?: {
+    signal?: AbortSignal
+    headers?: Record<string, string>
+    redirect?: 'follow' | 'manual'
+  },
 ) => Promise<{
   ok: boolean
   status: number
+  url?: string
+  headers?: { get: (name: string) => string | null }
   json: () => Promise<unknown>
   text: () => Promise<string>
 }>
@@ -65,6 +71,7 @@ export function labelFor(ts: string): string {
 
 export function stripHtml(html: string): string {
   return html
+    .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
@@ -76,8 +83,17 @@ export function stripHtml(html: string): string {
     .trim()
 }
 
+/** Only rendered markup: comments, scripts, styles and templates are noise. */
+function renderedMarkup(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<template[\s\S]*?<\/template>/gi, ' ')
+}
+
 function pick(html: string, re: RegExp): string {
-  const match = html.match(re)
+  const match = renderedMarkup(html).match(re)
   return match ? stripHtml(match[1]).slice(0, 160) : ''
 }
 
@@ -109,6 +125,31 @@ export function extractCapture(html: string, ts: string, archiveUrl: string): Ca
   }
 }
 
+const LOCAL_SUFFIXES = ['.local', '.localhost', '.internal', '.home', '.lan', '.test', '.invalid', '.example']
+
+function isIpLiteral(host: string): boolean {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.startsWith('[') || host.includes(':')
+}
+
+function isPrivateIpv4(host: string): boolean {
+  const parts = host.split('.').map(Number)
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return true
+  }
+  const [a, b] = parts
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    a >= 224
+  )
+}
+
 /**
  * Turn a user string into an archive target. Rejects anything that is not a
  * public-looking http(s) page; credentials and fragments are stripped.
@@ -133,7 +174,18 @@ export function normaliseTarget(raw: string): URL {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new TimelineError('Only http and https pages are supported', 400)
   }
-  if (!url.hostname.includes('.') || /\s/.test(url.hostname)) {
+
+  const host = url.hostname.toLowerCase()
+  if (isIpLiteral(host) && isPrivateIpv4(host)) {
+    throw new TimelineError('Use a public domain, not a local or private address', 400)
+  }
+  if (isIpLiteral(host)) {
+    throw new TimelineError('Use a domain name, not an IP address', 400)
+  }
+  if (host === 'localhost' || LOCAL_SUFFIXES.some((suffix) => host.endsWith(suffix))) {
+    throw new TimelineError('Use a public domain, not a local or private address', 400)
+  }
+  if (!host.includes('.') || /\s/.test(host)) {
     throw new TimelineError('That does not look like a public domain', 400)
   }
   url.hash = ''
@@ -183,7 +235,9 @@ export function diffCaptures(captures: Capture[]): Change[] {
     }
     const added = capture.prices.filter((price) => !previous.prices.includes(price))
     const removed = previous.prices.filter((price) => !capture.prices.includes(price))
-    if (added.length || removed.length) {
+    // Only claim a price change when both captures actually show prices. A page
+    // that lost its pricing block is unreadable evidence, not a deletion.
+    if (previous.prices.length > 0 && capture.prices.length > 0 && (added.length || removed.length)) {
       changes.push({
         ts: capture.ts,
         label: capture.label,
@@ -212,13 +266,35 @@ export async function buildTimeline(raw: string, options: BuildOptions = {}): Pr
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
 
-  const get = async (url: string) => {
-    const response = await fetchImpl(url, {
-      signal: controller.signal,
-      headers: { 'user-agent': USER_AGENT },
-    })
-    if (!response.ok) throw new TimelineError(`Archive responded ${response.status}`, 502)
-    return response
+  const ARCHIVE_ORIGIN = 'https://web.archive.org'
+
+  // Redirects are followed by hand, one hop at a time, so an off-site
+  // redirect can never be fetched or read.
+  const getArchive = async (url: string) => {
+    let current = url
+    for (let hop = 0; hop <= 3; hop += 1) {
+      const response = await fetchImpl(current, {
+        signal: controller.signal,
+        headers: { 'user-agent': USER_AGENT },
+        redirect: 'manual',
+      })
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers?.get('location')
+        if (!location) throw new TimelineError('Archive redirect had no location', 502)
+        const next = new URL(location, current)
+        if (next.origin !== ARCHIVE_ORIGIN) {
+          throw new TimelineError('Archive redirected off-site', 502)
+        }
+        current = next.toString()
+        continue
+      }
+      if (!response.ok) throw new TimelineError(`Archive responded ${response.status}`, 502)
+      if (response.url && new URL(response.url).origin !== ARCHIVE_ORIGIN) {
+        throw new TimelineError('Archive redirected off-site', 502)
+      }
+      return response
+    }
+    throw new TimelineError('Archive redirected too many times', 502)
   }
 
   const rowsFor = async (path: string, collapse: string, limit: number) => {
@@ -229,36 +305,47 @@ export async function buildTimeline(raw: string, options: BuildOptions = {}): Pr
     cdx.searchParams.set('collapse', `timestamp:${collapse}`)
     cdx.searchParams.set('from', String(from))
     cdx.searchParams.set('limit', String(limit))
-    const response = await get(cdx.toString())
+    const response = await getArchive(cdx.toString())
     const payload = (await response.json()) as unknown
     return Array.isArray(payload) ? (payload as string[][]) : []
   }
 
   try {
-    const rows = await rowsFor(target.hostname + target.pathname, '6', maxCaptures * 2)
+    // The full normalised URL, including any query string, so a query-specific
+    // pricing page is not silently swapped for its bare path.
+    const rows = await rowsFor(target.href, '6', maxCaptures * 2)
     const captures: Capture[] = []
 
     for (const row of rows.slice(1, maxCaptures + 1)) {
       const ts = row[1]
-      const snapshotUrl = `https://web.archive.org/web/${ts}id_/${target.href}`
+      if (!/^\d{14}$/.test(ts ?? '')) continue
+      // Cite the URL the archive actually indexed when it is valid, so the
+      // printed link and the fetched snapshot are the same page variant.
+      const indexed =
+        typeof row[2] === 'string' && /^https?:\/\//i.test(row[2]) ? row[2] : target.href
+      const snapshotUrl = `https://web.archive.org/web/${ts}id_/${indexed}`
       try {
-        const response = await get(snapshotUrl)
+        const response = await getArchive(snapshotUrl)
         const html = await response.text()
-        captures.push(extractCapture(html, ts, `https://web.archive.org/web/${ts}/${target.href}`))
-      } catch {
+        const capture = extractCapture(html, ts, `https://web.archive.org/web/${ts}/${indexed}`)
+        // An empty shell is not evidence: it cannot support a before/after claim.
+        if (capture.title || capture.h1 || capture.prices.length > 0) captures.push(capture)
+      } catch (error) {
+        if ((error as Error)?.name === 'AbortError') {
+          throw new TimelineError('The archive took too long to answer. Try again in a minute.', 504)
+        }
         /* a snapshot that will not load is a gap, not a fatal error */
       }
       if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs))
     }
 
     if (captures.length === 0) {
-      const siteRows = await rowsFor(target.hostname, '4', 6)
-      if (siteRows.length < 2) {
+      if (rows.length < 2) {
         throw new TimelineError('No archived captures found for that page', 404)
       }
       throw new TimelineError(
-        'That page is archived at the site level but its snapshots could not be read. Try the homepage or another path.',
-        404,
+        'The archive lists captures for that page but none could be read. Try again shortly.',
+        502,
       )
     }
 

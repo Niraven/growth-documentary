@@ -97,6 +97,17 @@ describe('api handler', () => {
     expect(variant.state.headers['x-cache']).toBe('hit')
   })
 
+  it('keeps case-sensitive paths distinct in the cache', async () => {
+    const { fetchImpl } = makeFetch()
+    const api = createApi({ fetchImpl, delayMs: 0 })
+    const upper = fakeExchange('/timeline?url=example.com/Plans')
+    await api(upper.req, upper.res)
+    expect(upper.state.headers['x-cache']).toBe('miss')
+    const lower = fakeExchange('/timeline?url=example.com/plans')
+    await api(lower.req, lower.res)
+    expect(lower.state.headers['x-cache']).toBe('miss')
+  })
+
   it('rate limits a noisy client', async () => {
     const { fetchImpl } = makeFetch()
     const api = createApi({ fetchImpl, delayMs: 0, rateLimit: 2 })

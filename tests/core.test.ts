@@ -223,4 +223,92 @@ describe('buildTimeline', () => {
     })
     expect(called).toBe(false)
   })
+
+  it.each([
+    '127.0.0.1',
+    '10.0.0.5',
+    '192.168.1.10',
+    '169.254.1.1',
+    '100.64.0.1',
+    'printer.local',
+    'api.internal',
+    'http://[::1]/pricing',
+  ])('rejects %s without a fetch', async (host) => {
+    let called = false
+    const spy: FetchLike = async () => {
+      called = true
+      throw new Error('should not run')
+    }
+    await expect(buildTimeline(host, { fetchImpl: spy })).rejects.toMatchObject({ status: 400 })
+    expect(called).toBe(false)
+  })
+
+  it('does not report a price deletion when a capture is an empty shell', async () => {
+    const rows = [
+      ['urlkey', 'timestamp'],
+      ['com,example)/pricing', '20200101000000'],
+      ['com,example)/pricing', '20210101000000'],
+    ]
+    const timeline = await buildTimeline('example.com/pricing', {
+      fetchImpl: mockFetch(
+        {
+          '20200101000000id_': '<title>Pricing</title><h1>Simple</h1><p>$10/mo</p>',
+          '20210101000000id_': '<html><body></body></html>',
+        },
+        rows,
+      ),
+      delayMs: 0,
+    })
+    expect(timeline.captures).toHaveLength(1)
+    expect(timeline.changes.some((change) => change.field === 'price')).toBe(false)
+  })
+
+  it('does not claim a price change when the later capture has no prices', async () => {
+    const rows = [
+      ['urlkey', 'timestamp'],
+      ['com,example)/pricing', '20200101000000'],
+      ['com,example)/pricing', '20210101000000'],
+    ]
+    const timeline = await buildTimeline('example.com/pricing', {
+      fetchImpl: mockFetch(
+        {
+          '20200101000000id_': '<title>Pricing</title><h1>Simple</h1><p>$10/mo</p>',
+          '20210101000000id_': '<title>Pricing</title><h1>Simple</h1>',
+        },
+        rows,
+      ),
+      delayMs: 0,
+    })
+    expect(timeline.captures).toHaveLength(2)
+    expect(timeline.changes.some((change) => change.field === 'price')).toBe(false)
+  })
+
+  it('refuses an off-site redirect without following it', async () => {
+    let calls = 0
+    const redirecting: FetchLike = async () => {
+      calls += 1
+      return {
+        ok: false,
+        status: 302,
+        headers: { get: () => 'https://evil.example/collect' },
+        json: async () => null,
+        text: async () => '',
+      }
+    }
+    await expect(
+      buildTimeline('example.com/pricing', { fetchImpl: redirecting, delayMs: 0 }),
+    ).rejects.toMatchObject({ status: 502 })
+    expect(calls).toBe(1)
+  })
+
+  it('returns 502 when captures exist but none can be read', async () => {
+    const rows = [
+      ['urlkey', 'timestamp'],
+      ['com,example)/pricing', '20200101000000'],
+      ['com,example)/pricing', '20210101000000'],
+    ]
+    await expect(
+      buildTimeline('example.com/pricing', { fetchImpl: mockFetch({}, rows), delayMs: 0 }),
+    ).rejects.toMatchObject({ status: 502 })
+  })
 })

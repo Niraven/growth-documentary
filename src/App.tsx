@@ -223,10 +223,10 @@ export default function App() {
   const heroTitle = live ? live.domain : 'Stripe'
   const heroKicker = live ? 'Live report · public archive' : 'Field report 001 · Pricing pages'
   const heroBlurb = live
-    ? `Every archived capture of ${live.domain}${live.path} that could be read, compared line by line. ${Math.max(
+    ? `Up to 12 sampled captures of ${live.domain}${live.path}, comparing page title, first headline and price strings. ${Math.max(
         0,
         live.changes.length - 1,
-      )} visible changes found across ${live.captures.length} captures.`
+      )} visible changes across ${live.captures.length} readable captures.`
     : 'What changed on one pricing page over five years, dated and shown with the page that proves it. No estimate of revenue, no claim about why.'
   const heroStats: [string, string][] = live
     ? [
@@ -288,6 +288,17 @@ export default function App() {
     void build(preset)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      toast.success('Link copied', {
+        description: live ? `${live.domain}${live.path}` : 'Example report',
+      })
+    } catch {
+      toast.error('Could not copy the link', { description: 'Copy the address bar instead.' })
+    }
+  }
 
   const open = (event: DocEvent) => {
     setActiveId(event.id)
@@ -364,7 +375,7 @@ export default function App() {
               <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => setView('how')}>
                 How it works
               </Button>
-              <Button size="sm">
+              <Button size="sm" type="button" onClick={share}>
                 Share
                 <ArrowUpRight />
               </Button>
@@ -519,7 +530,7 @@ export default function App() {
                       {index === 1 && (
                         <div className="mt-1 flex items-start gap-2 rounded-xl border border-dashed border-border bg-card/50 px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
                           <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-accent-foreground" />
-                          24 months unobserved — no page capture between Jun 2022 and Jun 2024
+                          24 months between examined captures — the archive holds more snapshots than this example reads
                         </div>
                       )}
                     </li>

@@ -1,34 +1,11 @@
 import { ExternalLink, FileSearch, Loader2 } from 'lucide-react'
+import type { Change as LiveChange, Capture as LiveCapture, Timeline as LiveData } from '../../shared/timeline'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 
-export type LiveCapture = {
-  ts: string
-  label: string
-  title: string
-  h1: string
-  prices: string[]
-  url: string
-}
-
-export type LiveChange = {
-  ts: string
-  label: string
-  field: 'title' | 'headline' | 'price' | 'first capture'
-  before: string
-  after: string
-  url: string
-}
-
-export type LiveData = {
-  domain: string
-  path: string
-  captures: LiveCapture[]
-  changes: LiveChange[]
-  checkedAt: string
-}
+export type { LiveCapture, LiveChange, LiveData }
 
 const fieldLabel: Record<LiveChange['field'], string> = {
   title: 'Page title',
@@ -39,7 +16,7 @@ const fieldLabel: Record<LiveChange['field'], string> = {
 
 export function LiveLoading({ domain }: { domain: string }) {
   return (
-    <Card className="mb-10">
+    <Card className="mb-10" role="status" aria-live="polite">
       <CardContent className="flex items-center gap-3 py-6">
         <Loader2 className="size-4 animate-spin text-muted-foreground" />
         <div>

@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { buildTimeline, TimelineError, type BuildOptions } from './core.js'
+import { buildTimeline, normaliseTarget, TimelineError, type BuildOptions } from './core.js'
 
 export type ApiOptions = BuildOptions & {
   /** Requests allowed per client per minute. */
@@ -81,7 +81,15 @@ export function createApi(options: ApiOptions = {}) {
       return
     }
 
-    const key = target.trim().toLowerCase()
+    // `basecamp.com/pricing`, `https://Basecamp.com/pricing/` and a trailing
+    // slash are the same report — cache them under one key.
+    let key = target.trim().toLowerCase()
+    try {
+      const normalised = normaliseTarget(target)
+      key = `${normalised.hostname}${normalised.pathname}`.toLowerCase()
+    } catch {
+      /* invalid targets are rejected by buildTimeline below */
+    }
     const cached = cache.get(key)
     if (cached && Date.now() - cached.at < cacheTtlMs) {
       res.setHeader('x-cache', 'hit')

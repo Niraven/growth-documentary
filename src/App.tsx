@@ -44,6 +44,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
+import { isErrorBody, isTimeline } from '../shared/timeline'
 import Gallery from '@/components/Gallery'
 import HowItWorks from '@/components/HowItWorks'
 import { LiveLoading, LiveReport, type LiveData } from '@/components/LiveReport'
@@ -243,10 +244,17 @@ export default function App() {
     setLoading(true)
     setError(null)
     setLive(null)
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => controller.abort(), 90_000)
     try {
-      const response = await fetch(`/api/timeline?url=${encodeURIComponent(target)}`)
-      const payload = (await response.json()) as LiveData & { error?: string }
-      if (!response.ok) throw new Error(payload.error ?? 'Could not build the timeline')
+      const response = await fetch(`/api/timeline?url=${encodeURIComponent(target)}`, {
+        signal: controller.signal,
+      })
+      const payload: unknown = await response.json()
+      if (!response.ok) {
+        throw new Error(isErrorBody(payload) ? payload.error : 'Could not build the timeline')
+      }
+      if (!isTimeline(payload)) throw new Error('The server returned an unexpected report')
       setLive(payload)
       const share = new URLSearchParams(window.location.search)
       share.set('url', target)
@@ -256,8 +264,13 @@ export default function App() {
         120,
       )
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not build the timeline')
+      if (caught instanceof DOMException && caught.name === 'AbortError') {
+        setError('That took too long. The archive may be slow — try again in a minute.')
+      } else {
+        setError(caught instanceof Error ? caught.message : 'Could not build the timeline')
+      }
     } finally {
+      window.clearTimeout(timer)
       setLoading(false)
     }
   }

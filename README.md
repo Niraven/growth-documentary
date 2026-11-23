@@ -84,6 +84,7 @@ Status codes: `400` invalid target, `404` nothing archived, `429` rate limited (
 ## Architecture
 
 ```
+shared/timeline.ts   the report contract and boundary guards, used by both sides
 src/                 React 19 UI (Vite, Tailwind 4, Radix, shadcn-style primitives)
   components/        report, live report, how-it-works, design sheet
 server/
@@ -104,7 +105,7 @@ Data source: [Internet Archive Wayback Machine](https://web.archive.org/) CDX + 
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 27 unit tests (vitest) |
+| `pnpm test` | 28 unit tests (vitest) |
 | `pnpm lint` | oxlint |
 | `pnpm check` | lint + test + build |
 

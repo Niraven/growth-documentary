@@ -49,7 +49,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | Check | Evidence |
 |---|---|
 | Pure extraction and diff | `tests/core.test.ts` (21 tests) |
-| Handler validation, cache, rate limit | `tests/api.test.ts` (6 tests) |
+| Handler validation, cache, rate limit | `tests/api.test.ts` (7 tests) |
 | Type-check + production build | `pnpm build` |
 | Live report for a real page | `?url=basecamp.com/pricing` → 12 captures, 5 changes |
 | Keyboard and labels | manual pass at 390px and 1280px |

@@ -84,6 +84,19 @@ describe('api handler', () => {
     expect(calls()).toBe(before)
   })
 
+  it('treats URL variants as one cached report', async () => {
+    const { fetchImpl } = makeFetch()
+    const api = createApi({ fetchImpl, delayMs: 0 })
+    const first = fakeExchange('/timeline?url=example.com/pricing')
+    await api(first.req, first.res)
+    const variant = fakeExchange(
+      `/timeline?url=${encodeURIComponent('https://EXAMPLE.com/pricing/')}`,
+    )
+    await api(variant.req, variant.res)
+    expect(variant.state.status).toBe(200)
+    expect(variant.state.headers['x-cache']).toBe('hit')
+  })
+
   it('rate limits a noisy client', async () => {
     const { fetchImpl } = makeFetch()
     const api = createApi({ fetchImpl, delayMs: 0, rateLimit: 2 })

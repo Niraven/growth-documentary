@@ -3,33 +3,9 @@
  * unit-testable and safe to import from a server, a script or a test.
  */
 
-export type Capture = {
-  ts: string
-  label: string
-  title: string
-  h1: string
-  prices: string[]
-  url: string
-}
+import type { Capture, Change, ChangeField, Timeline } from '../shared/timeline.js'
 
-export type ChangeField = 'title' | 'headline' | 'price' | 'first capture'
-
-export type Change = {
-  ts: string
-  label: string
-  field: ChangeField
-  before: string
-  after: string
-  url: string
-}
-
-export type Timeline = {
-  domain: string
-  path: string
-  captures: Capture[]
-  changes: Change[]
-  checkedAt: string
-}
+export type { Capture, Change, ChangeField, Timeline }
 
 export class TimelineError extends Error {
   status: number

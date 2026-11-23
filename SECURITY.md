@@ -1,26 +1,47 @@
 # Security
 
-## Design
+## Trust boundaries
 
-- The server never fetches the page you type. Your input is used only to build a query against `web.archive.org` (CDX) and to construct a snapshot path. The only outbound host is `web.archive.org`.
-- Archive redirects are followed by hand, at most three hops, and a hop that leaves `web.archive.org` is refused before it is fetched.
-- No credentials, cookies or tokens are stored or required.
-- No user accounts, no database. Reports are cached in memory for 10 minutes and lost on restart.
-- The API binds to `127.0.0.1` by default and is intended for private networks.
-- Request bodies are not accepted; the API is `GET` only.
-- Responses set `x-content-type-options: nosniff` and are JSON only.
+- **The dated timeline** reads only `web.archive.org`. Your input becomes a CDX query and a snapshot path; the target site is never contacted for a timeline.
+- **The live check** is the one path that contacts a third-party host, only when the user clicks. It is opt-in and never contributes a dated row.
+- **Saved reports** are written to one JSON file on the server's disk. There is no account system, so the saved store is exactly as private as the server itself.
 
 ## Input handling
 
-- Targets must be `http`/`https` with a dotted hostname; `localhost`, credentials and fragments are rejected before any network call.
-- Responses from the archive are parsed as text; no HTML is rendered from remote content. The UI renders extracted strings as React text nodes, never as HTML.
+- Targets must be `http`/`https` with a dotted hostname; `localhost`, IP literals, credentials, local suffixes and fragments are rejected before any network call.
+- Archive responses are parsed as text. No remote HTML is rendered; extracted strings are React text nodes, never `dangerouslySetInnerHTML`.
+- JSON request bodies are capped at 16 kB and must contain a string `url`.
+- Saved-report ids are validated against `^[A-Za-z0-9_-]{6,24}$` before any lookup.
 
-## Rate limiting
+## Live check (SSRF posture)
 
-Eight reports per minute per client address, in memory. This is a courtesy limit, not a security boundary — put a real proxy quota in front if you expose the service.
+- Hostnames are resolved with `dns.lookup(..., { all: true })`; **every** address must be public. Loopback, private, link-local, CGNAT, documentation, multicast and IPv4-mapped ranges are rejected for IPv4 and IPv6.
+- Redirects are followed by hand, at most three hops, and must stay on the same hostname and port.
+- `robots.txt` is fetched first, from the same host, under the same rules. A disallow, or a 401/403 on `robots.txt`, returns 403 and the page is not requested.
+- HTML content type only; 2 MB byte cap; 15 s total budget; no cookies, no credentials, no JavaScript execution, no retries.
+- Known residual: DNS is resolved immediately before the request, but Node's `fetch` resolves again. A hostile DNS server could rebind between the two answers. The window is small, the response is parsed as text only, and this is a self-hosted tool, but it is not a full DNS-pinning implementation. Upgrade path: connect to the validated IP with a custom agent and a Host header.
+
+## Saved report storage
+
+- One file, default `data/reports.json` (`GD_DATA_DIR` / `GD_REPORTS_FILE` override), mode `0600`, atomic write via temp file + rename, serialised mutations.
+- Bounded: 200 reports, 800 kB per report. Old entries are pruned by count.
+- Saved ids are random, not guessable, but **not an authorization boundary**. Anyone who can reach the API can list, read and delete saved reports. Do not host this on a public network without authentication in front.
+- A saved report is frozen at save time and never recomputed on read.
+
+## Transport and responses
+
+- API binds to `127.0.0.1` by default and is intended for a private network.
+- JSON only, `x-content-type-options: nosniff` on API responses.
+- Rate limits per client per minute: 8 timelines, 20 sitemap reads, 4 live checks, 6 saves. In-memory, per socket address; a courtesy limit, not a security boundary.
+- Archive redirects are followed by hand, at most three hops, and an off-site hop is refused before it is fetched.
+- No credentials, cookies or tokens are stored or required.
+
+## Export
+
+CSV export runs in the browser. A cell that begins with `=`, `+`, `-`, `@`, tab or carriage return is prefixed with an apostrophe so spreadsheet software treats it as text. JSON export is the report object plus an export timestamp.
 
 ## Reporting a vulnerability
 
 Open a private security advisory on the repository, or email the maintainer listed in `package.json`. Do not open a public issue for an unfixed vulnerability. Include reproduction steps and the affected endpoint.
 
-Please do not test against third-party sites; use a domain you control.
+Please do not test the live check against third-party sites; use a domain you control.

@@ -1,24 +1,36 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { motion } from 'motion/react'
 import { Toaster, toast } from 'sonner'
-import { ArrowUpRight, ShieldCheck } from 'lucide-react'
+import { ArrowUpRight, Bookmark, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { isErrorBody, isTimeline } from '../shared/timeline'
-import Gallery from '@/components/Gallery'
+import {
+  isErrorBody,
+  isSavedListBody,
+  isSavedReport,
+  isTimeline,
+  type SavedSummary,
+} from '../shared/timeline'
 import HowItWorks from '@/components/HowItWorks'
 import { EmptyState } from '@/components/EmptyState'
 import { LiveLoading, LiveReport, type LiveData } from '@/components/LiveReport'
+import { LivePanel } from '@/components/LivePanel'
+import { ReportActions } from '@/components/ReportActions'
+import { SavedReports } from '@/components/SavedReports'
+
+const Gallery = lazy(() => import('@/components/Gallery'))
+
+type View = 'report' | 'saved' | 'system' | 'how'
 
 export default function App() {
-  const [view, setView] = useState<'report' | 'system' | 'how'>(() =>
-    window.location.hash === '#system'
-      ? 'system'
-      : window.location.hash === '#how'
-        ? 'how'
-        : 'report',
-  )
+  const [view, setView] = useState<View>(() => {
+    const hash = window.location.hash
+    if (hash === '#system') return 'system'
+    if (hash === '#how') return 'how'
+    if (hash === '#saved') return 'saved'
+    return 'report'
+  })
   const [skin, setSkin] = useState<'day' | 'paper' | 'night'>(() => {
     const param = new URLSearchParams(window.location.search).get('skin')
     if (param === 'day' || param === 'paper' || param === 'night') return param
@@ -38,16 +50,27 @@ export default function App() {
     }
   }, [skin])
 
+  const [savedId, setSavedId] = useState<string | null>(() =>
+    window.location.hash.startsWith('#report/') ? window.location.hash.slice('#report/'.length) : null,
+  )
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+
   useEffect(() => {
     if (view === 'system') window.history.replaceState(null, '', '#system')
     else if (view === 'how') window.history.replaceState(null, '', '#how')
+    else if (view === 'saved') window.history.replaceState(null, '', '#saved')
+    else if (savedId) window.history.replaceState(null, '', `#report/${savedId}`)
     else window.history.replaceState(null, '', window.location.pathname + window.location.search)
-  }, [view])
+  }, [view, savedId])
 
   const [domain, setDomain] = useState('basecamp.com/pricing')
   const [live, setLive] = useState<LiveData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [savedList, setSavedList] = useState<SavedSummary[]>([])
+  const [savedLoading, setSavedLoading] = useState(false)
+  const [savedError, setSavedError] = useState<string | null>(null)
 
   const changeCount = live ? Math.max(0, live.changes.length - 1) : 0
 
@@ -55,6 +78,8 @@ export default function App() {
     setLoading(true)
     setError(null)
     setLive(null)
+    setSavedId(null)
+    setSavedAt(null)
     const controller = new AbortController()
     const timer = window.setTimeout(() => controller.abort(), 120_000)
     try {
@@ -92,7 +117,134 @@ export default function App() {
     if (target) void build(target)
   }
 
+  const refreshSaved = async () => {
+    setSavedLoading(true)
+    setSavedError(null)
+    try {
+      const response = await fetch('/api/reports')
+      const payload: unknown = await response.json()
+      if (!response.ok) {
+        throw new Error(isErrorBody(payload) ? payload.error : 'Could not load saved reports')
+      }
+      if (!isSavedListBody(payload)) throw new Error('The server returned an unexpected list')
+      setSavedList(payload.reports)
+    } catch (caught) {
+      setSavedError(caught instanceof Error ? caught.message : 'Could not load saved reports')
+    } finally {
+      setSavedLoading(false)
+    }
+  }
+
+  const openSaved = async (id: string) => {
+    setLoading(true)
+    setError(null)
+    setLive(null)
+    try {
+      const response = await fetch(`/api/reports/${encodeURIComponent(id)}`)
+      const payload: unknown = await response.json()
+      if (!response.ok) {
+        throw new Error(isErrorBody(payload) ? payload.error : 'Could not open that saved report')
+      }
+      if (!isSavedReport(payload)) throw new Error('The server returned an unexpected saved report')
+      setLive(payload.report)
+      setSavedId(payload.id)
+      setSavedAt(payload.savedAt)
+      setDomain(`${payload.report.domain}${payload.report.path}`)
+      setView('report')
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${window.location.search}#report/${payload.id}`,
+      )
+      window.setTimeout(
+        () => document.getElementById('live')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+        120,
+      )
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not open that saved report')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const save = async () => {
+    if (!live || savedAt || saving) return
+    setSaving(true)
+    try {
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url: `${live.domain}${live.path}` }),
+      })
+      const payload: unknown = await response.json()
+      if (!response.ok) {
+        throw new Error(isErrorBody(payload) ? payload.error : 'Could not save the report')
+      }
+      const id = (payload as { id?: unknown }).id
+      const at = (payload as { savedAt?: unknown }).savedAt
+      if (typeof id !== 'string' || typeof at !== 'string') {
+        throw new Error('The server did not return a saved id')
+      }
+      setSavedId(id)
+      setSavedAt(at)
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${window.location.search}#report/${id}`,
+      )
+      await refreshSaved()
+      toast.success('Report saved', {
+        description: 'A frozen copy on this machine. The link reopens it.',
+        action: {
+          label: 'Copy link',
+          onClick: () => {
+            const url = `${window.location.origin}${window.location.pathname}${window.location.search}#report/${id}`
+            void navigator.clipboard.writeText(url)
+          },
+        },
+      })
+    } catch (caught) {
+      toast.error('Could not save the report', {
+        description: caught instanceof Error ? caught.message : 'Try again.',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const deleteSaved = async (id: string) => {
+    try {
+      const response = await fetch(`/api/reports/${encodeURIComponent(id)}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const payload: unknown = await response.json().catch(() => null)
+        throw new Error(isErrorBody(payload) ? payload.error : 'Could not delete that report')
+      }
+      if (savedId === id) {
+        setLive(null)
+        setSavedId(null)
+        setSavedAt(null)
+      }
+      await refreshSaved()
+      toast.success('Saved report deleted')
+    } catch (caught) {
+      toast.error('Could not delete the report', {
+        description: caught instanceof Error ? caught.message : 'Try again.',
+      })
+    }
+  }
+
   useEffect(() => {
+    void refreshSaved()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash.startsWith('#report/')) {
+      void openSaved(hash.slice('#report/'.length))
+      return
+    }
+    if (hash === '#saved') return
     const preset = new URLSearchParams(window.location.search).get('url')
     if (!preset) return
     setDomain(preset)
@@ -188,11 +340,28 @@ export default function App() {
                 variant="ghost"
                 size="sm"
                 className="hidden sm:inline-flex"
+                onClick={() => {
+                  setView('saved')
+                  void refreshSaved()
+                }}
+              >
+                <Bookmark />
+                Saved
+                {savedList.length > 0 && (
+                  <span className="ml-1 rounded-full bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">
+                    {savedList.length}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden sm:inline-flex"
                 onClick={() => setView('how')}
               >
                 How it works
               </Button>
-              {live && (
+              {live && !savedAt && (
                 <Button size="sm" type="button" onClick={share}>
                   Share
                   <ArrowUpRight />
@@ -202,8 +371,26 @@ export default function App() {
           </div>
         </header>
 
-        {view === 'system' ? (
-          <Gallery onBack={() => setView('report')} />
+        {view === 'saved' ? (
+          <SavedReports
+            reports={savedList}
+            loading={savedLoading}
+            error={savedError}
+            onOpen={(id) => void openSaved(id)}
+            onDelete={(id) => void deleteSaved(id)}
+            onRefresh={() => void refreshSaved()}
+            onBack={() => setView('report')}
+          />
+        ) : view === 'system' ? (
+          <Suspense
+            fallback={
+              <div className="mx-auto max-w-6xl px-5 py-12 text-sm text-muted-foreground md:px-8">
+                Loading the design system…
+              </div>
+            }
+          >
+            <Gallery onBack={() => setView('report')} />
+          </Suspense>
         ) : view === 'how' ? (
           <HowItWorks onBack={() => setView('report')} />
         ) : (
@@ -216,7 +403,11 @@ export default function App() {
             >
               <div>
                 <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {live ? 'Live report · public archive' : 'Growth Documentary · public archive'}
+                  {live
+                    ? savedAt
+                      ? 'Saved report · public archive'
+                      : 'Live report · public archive'
+                    : 'Growth Documentary · public archive'}
                 </p>
                 <h1 className="mt-4 font-display text-[clamp(38px,5.6vw,64px)] leading-[0.95] tracking-[-0.04em]">
                   {live ? (
@@ -259,8 +450,9 @@ export default function App() {
                     </Button>
                   </div>
                   <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
-                    The exact URL, query string included; <code>https://</code> is optional. Read
-                    from the archive only, up to 24 captures across two years — about 20–40 seconds.
+                    {savedAt
+                      ? 'This copy is frozen. Building again creates a new, separate report; the saved copy stays as it is.'
+                      : 'The exact URL, query string included; https:// is optional. Read from the archive only, up to 24 captures across two years — about 20–40 seconds.'}
                   </p>
                 </form>
               </div>
@@ -303,7 +495,23 @@ export default function App() {
                 <span className="font-medium">Could not build that timeline.</span> {error}
               </div>
             )}
-            {live && <div className="pt-10"><LiveReport data={live} /></div>}
+            {live && !loading && (
+              <div className="pt-6">
+                <ReportActions
+                  report={live}
+                  savedId={savedId}
+                  savedAt={savedAt}
+                  saving={saving}
+                  onSave={() => void save()}
+                />
+              </div>
+            )}
+            {live && (
+              <div className="pt-4">
+                <LiveReport data={live} savedAt={savedAt} />
+              </div>
+            )}
+            {live && !loading && <LivePanel report={live} />}
             {!live && !loading && <EmptyState onPick={pick} />}
           </main>
         )}
@@ -313,9 +521,13 @@ export default function App() {
             <span>
               {live
                 ? `Sources: Internet Archive Wayback Machine · ${live.coverage.sampled} of ${live.coverage.available} captures of ${live.domain}${live.path}`
-                : 'Sources: Internet Archive Wayback Machine · pages are read from the archive, never from the live site'}
+                : 'Sources: Internet Archive Wayback Machine · live check is opt-in and never counted as a change'}
             </span>
             <div className="flex items-center gap-4">
+              <button onClick={() => setView('saved')} className="hover:text-foreground">
+                Saved reports
+              </button>
+              <Separator orientation="vertical" className="h-3" />
               <button onClick={() => setView('how')} className="hover:text-foreground">
                 How it works
               </button>

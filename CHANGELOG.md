@@ -4,6 +4,52 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-11-24
+
+Saved reports, exports, and an opt-in live check that is deliberately not history.
+
+### Added
+
+- **Saved reports.** `POST /api/reports` freezes the exact computed timeline in
+  `data/reports.json`; `GET /api/reports` lists, `GET /api/reports/:id` reopens,
+  `DELETE` removes. Random ids, 200-report cap, atomic writes, serialised
+  mutations. A saved copy is never recomputed on read.
+- **CSV and JSON export** in the browser. CSV cells that begin with a formula
+  marker are neutralised so a spreadsheet cannot execute them.
+- **Live check** (`GET /api/live`), behind a button: one read of the current page
+  after DNS/public-address validation and a robots.txt check. HTML only, no
+  cookies, same-host redirects, 2 MB cap, 15 s budget. The result is compared
+  with the latest capture but never becomes a dated change.
+- A saved-report link (`#report/<id>`), saved list, and per-card delete with a
+  confirm step.
+
+### Changed
+
+- The design-system page is lazy-loaded; the main bundle drops from 540 kB to
+  487 kB (151 kB gzip).
+- Saved reports are labelled **Saved report**, hide the duplicate Share button,
+  and state that rebuilding creates a new, separate report.
+- Footer no longer claims the tool never contacts the live site; it says the live
+  check is opt-in and never counted as a change.
+- Timestamps carry a timezone; saved and live times are labelled.
+
+### Fixed
+
+- A formatting option that combined `dateStyle` with `timeZoneName` threw at
+  runtime and blanked the app. Replaced with explicit date parts.
+- The header Saved control no longer sets an accessible name that omits its
+  visible count (axe `label-content-name-mismatch`).
+
+### Evidence
+
+- 126 unit tests (49 core, 14 handler, 6 sitemap, 7 store, 31 live, 5 export, 14
+  contract); `pnpm check` green.
+- axe-core WCAG 2.1 A/AA: 0 violations on the landing screen, a saved report and
+  the saved list.
+- Live end-to-end on 24 Nov 2026: save `basecamp.com/pricing` → 201, 10 field
+  changes; list → 1; reopen → full report; live check → 200 in 0.6 s with
+  `robots: allowed`; delete → 204.
+
 ## [0.3.0] — 2026-11-24
 
 Deeper sampling, a coverage view, and the site's own sitemap as a second layer.

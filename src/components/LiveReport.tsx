@@ -15,7 +15,14 @@ const fieldLabel: Record<LiveChange['field'], string> = {
 }
 
 const formatChecked = (iso: string): string =>
-  new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  new Date(iso).toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  })
 
 export function LiveLoading({ domain }: { domain: string }) {
   return (
@@ -100,7 +107,7 @@ function ChangeRow({ change }: { change: LiveChange }) {
   )
 }
 
-export function LiveReport({ data }: { data: LiveData }) {
+export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string | null }) {
   const changeCount = Math.max(0, data.changes.length - 1)
   const groups = groupChanges(data.changes)
   const first = data.captures[0]
@@ -111,7 +118,7 @@ export function LiveReport({ data }: { data: LiveData }) {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
         <div className="min-w-0">
           <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">
-            Live report · checked {formatChecked(data.checkedAt)}
+            {savedAt ? 'Saved report' : 'Live report'} · checked {formatChecked(data.checkedAt)}
           </p>
           <h2 id="live" className="mt-2 break-words font-display text-3xl tracking-[-0.02em]">
             {data.domain}

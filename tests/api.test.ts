@@ -1,7 +1,11 @@
+import { mkdtemp } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createApi } from '../server/api'
 import type { FetchLike } from '../server/core'
+import { ReportStore } from '../server/store'
 
 const cdx = [
   ['urlkey', 'timestamp', 'original'],
@@ -28,8 +32,20 @@ function makeFetch() {
   return { fetchImpl, calls: () => calls }
 }
 
-function fakeExchange(url: string, ip = '10.0.0.1') {
-  const req = { url, method: 'GET', socket: { remoteAddress: ip } } as unknown as IncomingMessage
+function fakeExchange(
+  url: string,
+  ip = '10.0.0.1',
+  init: { method?: string; body?: string } = {},
+) {
+  const chunks = init.body === undefined ? [] : [Buffer.from(init.body)]
+  const req = {
+    url,
+    method: init.method ?? 'GET',
+    socket: { remoteAddress: ip },
+    async *[Symbol.asyncIterator]() {
+      for (const chunk of chunks) yield chunk
+    },
+  } as unknown as IncomingMessage
   const state = { status: 0, headers: {} as Record<string, string>, body: '' }
   const res = {
     writableEnded: false,
@@ -57,7 +73,7 @@ describe('api handler', () => {
     await api(req, res)
     expect(state.status).toBe(200)
     expect(JSON.parse(state.body).ok).toBe(true)
-    expect(JSON.parse(state.body).version).toBe('0.3.0')
+    expect(JSON.parse(state.body).version).toBe('0.4.0')
   })
 
   it('returns site info and caches it', async () => {
@@ -183,5 +199,107 @@ describe('api handler', () => {
     const { req, res, state } = fakeExchange('/nope')
     await api(req, res)
     expect(state.status).toBe(404)
+  })
+
+  it('saves, lists, opens and deletes a report', async () => {
+    const { fetchImpl } = makeFetch()
+    const dir = await mkdtemp(join(tmpdir(), 'gd-api-'))
+    const store = new ReportStore(join(dir, 'reports.json'))
+    const api = createApi({ fetchImpl, delayMs: 0, store })
+
+    const create = fakeExchange('/reports', '10.0.0.2', {
+      method: 'POST',
+      body: JSON.stringify({ url: 'example.com/pricing' }),
+    })
+    await api(create.req, create.res)
+    expect(create.state.status).toBe(201)
+    const saved = JSON.parse(create.state.body) as { id: string; changes: number }
+    expect(saved.id).toMatch(/^[A-Za-z0-9_-]{6,24}$/)
+    expect(saved.changes).toBe(1)
+
+    const list = fakeExchange('/reports', '10.0.0.2')
+    await api(list.req, list.res)
+    expect(list.state.status).toBe(200)
+    expect(JSON.parse(list.state.body).reports).toHaveLength(1)
+
+    const open = fakeExchange(`/reports/${saved.id}`, '10.0.0.2')
+    await api(open.req, open.res)
+    expect(open.state.status).toBe(200)
+    expect(JSON.parse(open.state.body).report.captures).toHaveLength(2)
+
+    const remove = fakeExchange(`/reports/${saved.id}`, '10.0.0.2', { method: 'DELETE' })
+    await api(remove.req, remove.res)
+    expect(remove.state.status).toBe(204)
+
+    const gone = fakeExchange(`/reports/${saved.id}`, '10.0.0.2')
+    await api(gone.req, gone.res)
+    expect(gone.state.status).toBe(404)
+  })
+
+  it('is idempotent when the same snapshot is saved twice', async () => {
+    const { fetchImpl } = makeFetch()
+    const dir = await mkdtemp(join(tmpdir(), 'gd-api-'))
+    const api = createApi({
+      fetchImpl,
+      delayMs: 0,
+      store: new ReportStore(join(dir, 'reports.json')),
+    })
+
+    const first = fakeExchange('/reports', '10.0.0.3', {
+      method: 'POST',
+      body: JSON.stringify({ url: 'example.com/pricing' }),
+    })
+    await api(first.req, first.res)
+    const second = fakeExchange('/reports', '10.0.0.3', {
+      method: 'POST',
+      body: JSON.stringify({ url: 'example.com/pricing' }),
+    })
+    await api(second.req, second.res)
+
+    expect(second.state.status).toBe(200)
+    expect(JSON.parse(second.state.body).id).toBe(JSON.parse(first.state.body).id)
+    const list = fakeExchange('/reports', '10.0.0.3')
+    await api(list.req, list.res)
+    expect(JSON.parse(list.state.body).reports).toHaveLength(1)
+  })
+
+  it('rejects a save without a url and a non-JSON body', async () => {
+    const api = createApi({ store: new ReportStore('/tmp/gd-never-written.json') })
+    const missing = fakeExchange('/reports', '10.0.0.4', { method: 'POST', body: '{}' })
+    await api(missing.req, missing.res)
+    expect(missing.state.status).toBe(400)
+
+    const malformed = fakeExchange('/reports', '10.0.0.4', { method: 'POST', body: 'nope' })
+    await api(malformed.req, malformed.res)
+    expect(malformed.state.status).toBe(400)
+    expect(JSON.parse(malformed.state.body).error).toMatch(/JSON/)
+  })
+
+  it('returns a live check and marks it no-store', async () => {
+    const fetchImpl: FetchLike = async (url) => {
+      if (url.endsWith('/robots.txt')) {
+        return { ok: false, status: 404, headers: { get: () => null }, json: async () => null, text: async () => '' }
+      }
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => 'text/html' },
+        json: async () => null,
+        text: async () => '<title>Now</title><h1>Current</h1><p>$30/mo</p>',
+      }
+    }
+    const api = createApi({
+      live: {
+        fetchImpl,
+        lookupImpl: async () => [{ address: '93.184.216.34', family: 4 }],
+      },
+    })
+    const call = fakeExchange('/live?url=example.com/pricing')
+    await api(call.req, call.res)
+    expect(call.state.status).toBe(200)
+    expect(call.state.headers['cache-control']).toBe('no-store')
+    const body = JSON.parse(call.state.body)
+    expect(body.title).toBe('Now')
+    expect(body.robots).toBe('allowed')
   })
 })

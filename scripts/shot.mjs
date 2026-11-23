@@ -17,7 +17,17 @@ const page = await browser.newPage()
 await page.goto(url, { waitUntil: 'networkidle2', timeout: 120_000 })
 
 if (waitFor) {
-  await page.waitForSelector(waitFor, { timeout: 120_000 })
+  if (waitFor.startsWith('text:')) {
+    await page
+      .waitForFunction(
+        (text) => !document.body.innerText.includes(text),
+        { timeout: 60_000 },
+        waitFor.slice('text:'.length),
+      )
+      .catch(() => console.log('WAIT_TIMEOUT', waitFor))
+  } else {
+    await page.waitForSelector(waitFor, { timeout: 120_000 })
+  }
   await new Promise((resolve) => setTimeout(resolve, 800))
 }
 

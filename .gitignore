@@ -25,3 +25,6 @@ dist-ssr
 
 # local review shots
 shot-*.png
+
+# saved reports (local data)
+data/

@@ -167,3 +167,117 @@ export function isSiteInfo(value: unknown): value is SiteInfo {
 export function isErrorBody(value: unknown): value is ErrorBody {
   return isRecord(value) && typeof value.error === 'string'
 }
+
+/* ------------------------------------------------------------------ *
+ * Saved reports
+ * ------------------------------------------------------------------ */
+
+/** A saved report as it appears in a list. */
+export type SavedSummary = {
+  id: string
+  savedAt: string
+  domain: string
+  path: string
+  /** Field changes, excluding the baseline row. */
+  changes: number
+  from: string
+  to: string
+}
+
+/** A saved report frozen at the moment it was stored. */
+export type SavedReport = {
+  id: string
+  savedAt: string
+  report: Timeline
+}
+
+export type SavedListBody = { reports: SavedSummary[] }
+
+const SAVED_ID = /^[A-Za-z0-9_-]{6,24}$/
+
+const isSavedSummary = (value: unknown): value is SavedSummary =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  SAVED_ID.test(value.id) &&
+  typeof value.savedAt === 'string' &&
+  typeof value.domain === 'string' &&
+  typeof value.path === 'string' &&
+  typeof value.changes === 'number' &&
+  typeof value.from === 'string' &&
+  typeof value.to === 'string'
+
+export function isSavedReport(value: unknown): value is SavedReport {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    SAVED_ID.test(value.id) &&
+    typeof value.savedAt === 'string' &&
+    isTimeline(value.report)
+  )
+}
+
+export function isSavedListBody(value: unknown): value is SavedListBody {
+  return isRecord(value) && Array.isArray(value.reports) && value.reports.every(isSavedSummary)
+}
+
+/* ------------------------------------------------------------------ *
+ * Live page check
+ * ------------------------------------------------------------------ */
+
+/**
+ * What a public page says *now*. This is deliberately not a `Capture`: it has
+ * no archive timestamp, so it can never become a dated change row.
+ */
+export type LiveCheck = {
+  domain: string
+  path: string
+  /** ISO timestamp of the read. */
+  fetchedAt: string
+  /** URL that was actually read, after same-host redirects. */
+  finalUrl: string
+  title: string
+  h1: string
+  prices: string[]
+  /** Always `allowed`: the request is made only after robots.txt permits it. */
+  robots: 'allowed'
+}
+
+export function isLiveCheck(value: unknown): value is LiveCheck {
+  return (
+    isRecord(value) &&
+    typeof value.domain === 'string' &&
+    typeof value.path === 'string' &&
+    typeof value.fetchedAt === 'string' &&
+    typeof value.finalUrl === 'string' &&
+    typeof value.title === 'string' &&
+    typeof value.h1 === 'string' &&
+    Array.isArray(value.prices) &&
+    value.prices.every((price) => typeof price === 'string') &&
+    value.robots === 'allowed'
+  )
+}
+
+/**
+ * Compare two readable field snapshots. Mirrors `diffCaptures` semantics: an
+ * empty side is a gap, never a deletion, and prices are compared as sets so a
+ * reorder is not a change.
+ */
+export function compareSnapshot(
+  previous: { title: string; h1: string; prices: string[] },
+  next: { title: string; h1: string; prices: string[] },
+): ChangeField[] {
+  const fields: ChangeField[] = []
+  if (previous.title && next.title && previous.title !== next.title) fields.push('title')
+  if (previous.h1 && next.h1 && previous.h1 !== next.h1) fields.push('headline')
+  if (
+    previous.prices.length > 0 &&
+    next.prices.length > 0 &&
+    sortedUnique(previous.prices) !== sortedUnique(next.prices)
+  ) {
+    fields.push('price')
+  }
+  return fields
+}
+
+const sortedUnique = (prices: string[]): string =>
+  Array.from(new Set(prices)).sort((a, b) => a.localeCompare(b)).join('\u0000')

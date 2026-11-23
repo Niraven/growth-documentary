@@ -137,14 +137,25 @@ const priceAmount = (value: string): number => {
 export const sortPrices = (prices: string[]): string[] =>
   [...prices].sort((a, b) => priceAmount(a) - priceAmount(b) || a.localeCompare(b))
 
-export function extractCapture(html: string, ts: string, archiveUrl: string): Capture {
+/** The three visible fields, from one HTML document. */
+export function readVisibleFields(html: string): {
+  title: string
+  h1: string
+  prices: string[]
+} {
   const doc = parseHtml(html)
   return {
-    ts,
-    label: labelFor(ts),
     title: cleanText(textOf(findTag(doc, 'title'))).slice(0, 160),
     h1: cleanText(textOf(findTag(doc, 'h1'))).slice(0, 160),
     prices: pricesIn(html),
+  }
+}
+
+export function extractCapture(html: string, ts: string, archiveUrl: string): Capture {
+  return {
+    ts,
+    label: labelFor(ts),
+    ...readVisibleFields(html),
     url: archiveUrl,
   }
 }

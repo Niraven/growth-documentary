@@ -58,8 +58,9 @@ Visual evidence: compare any two captures, read a monthly price range, and cite 
   - IPv6 addresses are parsed to bytes, so IPv4-compatible forms such as
     `::7f00:1`, uncompressed IPv4-mapped forms and IPv4-translated forms are
     rejected too, not only their canonical spellings.
-- Price range excludes per-unit `/mo` strings (`$15/mo per seat`, `per admin`,
-  `$8.75/user/mo`), matching the caption, and preserves cents (`$8.75`, not `$9`).
+- Price range excludes per-unit `/mo` strings end to end: extraction now keeps
+  the qualifier (`$15/mo per seat`, `$8.75/user/mo`), and the chart filter drops
+  it. Cents are preserved (`$8.75`, not `$9`).
 - Citations use the local calendar date, matching the saved/read timestamps in
   the UI.
 - Saved-report copy no longer claims to freeze "the exact response": the server
@@ -67,7 +68,7 @@ Visual evidence: compare any two captures, read a monthly price range, and cite 
 
 ### Evidence
 
-- 162 unit tests (49 core, 15 handler, 6 sitemap, 7 store, 50 live, 5 export,
+- 163 unit tests (50 core, 15 handler, 6 sitemap, 7 store, 50 live, 5 export,
   14 contract, 14 compare, 2 citation); `pnpm check` green.
 - axe-core WCAG 2.1 A/AA: 0 violations on the report with both new panels.
 - Live report on 24 Nov 2026: 17 of 392 captures, 10 field changes; compare and

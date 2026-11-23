@@ -13,6 +13,7 @@ import {
   type Capture,
   type FetchLike,
 } from '../server/core'
+import { monthlyPrices } from '../shared/compare'
 
 const capture = (ts: string, overrides: Partial<Capture> = {}): Capture => ({
   ts,
@@ -47,6 +48,12 @@ describe('pricesIn', () => {
 
   it('returns nothing when a page has no prices', () => {
     expect(pricesIn('<h1>Talk to us</h1>')).toEqual([])
+  })
+
+  it('keeps a per-unit qualifier so downstream views can exclude it', () => {
+    const prices = pricesIn('<p>$15/mo per seat</p><p>$8.75/user/mo</p><p>$49/mo</p>')
+    expect(prices).toEqual(['$15/mo per seat', '$8.75/user/mo', '$49/mo'])
+    expect(monthlyPrices(prices)).toEqual([49])
   })
 
   it('ignores prices inside templates, scripts and comments', () => {

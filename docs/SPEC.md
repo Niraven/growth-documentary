@@ -91,7 +91,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 
 | Check | Evidence |
 |---|---|
-| Extraction, diff, sampling | `tests/core.test.ts` (49 tests) |
+| Extraction, diff, sampling | `tests/core.test.ts` (50 tests) |
 | Handler routes, cache, limits, API index | `tests/api.test.ts` (15 tests) |
 | Sitemap parse and read | `tests/site.test.ts` (6 tests) |
 | Saved-report store | `tests/store.test.ts` (7 tests) |

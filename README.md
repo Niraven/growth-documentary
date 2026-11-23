@@ -27,8 +27,10 @@ Production build, with the same API mounted:
 
 ```bash
 pnpm build
-pnpm start        # http://127.0.0.1:5190
+pnpm start        # http://127.0.0.1:5191
 ```
+
+Reports are shareable: `/?url=slack.com/pricing` rebuilds the same timeline on load.
 
 Requirements: Node 20+ and `pnpm`. No API keys, no database, no account.
 

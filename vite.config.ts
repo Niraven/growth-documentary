@@ -18,7 +18,7 @@ export default defineConfig({
   },
   preview: {
     host: '127.0.0.1',
-    port: 5190,
+    port: 5191,
     strictPort: true,
     allowedHosts: ['citadel.tail72b88e.ts.net', '.ts.net', 'localhost', '127.0.0.1'],
   },

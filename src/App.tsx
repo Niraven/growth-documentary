@@ -206,7 +206,7 @@ export default function App() {
   useEffect(() => {
     if (view === 'system') window.history.replaceState(null, '', '#system')
     else if (view === 'how') window.history.replaceState(null, '', '#how')
-    else window.history.replaceState(null, '', window.location.pathname)
+    else window.history.replaceState(null, '', window.location.pathname + window.location.search)
   }, [view])
 
   const active = events.find((event) => event.id === activeId) ?? events[2]
@@ -248,6 +248,9 @@ export default function App() {
       const payload = (await response.json()) as LiveData & { error?: string }
       if (!response.ok) throw new Error(payload.error ?? 'Could not build the timeline')
       setLive(payload)
+      const share = new URLSearchParams(window.location.search)
+      share.set('url', target)
+      window.history.replaceState(null, '', `${window.location.pathname}?${share.toString()}`)
       window.setTimeout(
         () => document.getElementById('live')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
         120,

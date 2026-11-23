@@ -18,7 +18,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "start": "vite preview --host 127.0.0.1 --port 5190",
+    "start": "vite preview",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

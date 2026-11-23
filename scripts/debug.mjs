@@ -8,19 +8,31 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1280, height: 1200 },
 })
 const page = await browser.newPage()
-page.on('console', (msg) => console.log('CONSOLE', msg.type(), msg.text().slice(0, 200)))
-page.on('pageerror', (err) => console.log('PAGEERROR', err.message.slice(0, 300)))
+page.on('pageerror', (err) => console.log('PAGEERROR', err.message.slice(0, 200)))
 page.on('response', async (res) => {
-  if (res.url().includes('/api/timeline')) {
+  if (res.url().includes('/api/')) {
     let body = ''
     try {
-      body = (await res.text()).slice(0, 200)
+      body = (await res.text()).slice(0, 120)
     } catch {}
-    console.log('API', res.status(), body)
+    console.log('API', res.status(), res.url().slice(-60), body)
   }
 })
-await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 })
-await new Promise((resolve) => setTimeout(resolve, 35_000))
-const text = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' ').slice(0, 700))
-console.log('TEXT', text)
+await page.goto(url, { waitUntil: 'networkidle2', timeout: 60_000 })
+await new Promise((resolve) => setTimeout(resolve, 25_000))
+
+const state = await page.evaluate(() => {
+  const alert = document.querySelector('[role=alert]')
+  const input = document.querySelector('#domain')
+  return {
+    input: input instanceof HTMLInputElement ? input.value : null,
+    alert: alert ? alert.textContent?.slice(0, 200) : null,
+    live: Boolean(document.querySelector('#live')),
+    apiResources: performance
+      .getEntriesByType('resource')
+      .filter((entry) => entry.name.includes('/api/'))
+      .map((entry) => `${entry.name.split('/api/')[1]} ${Math.round(entry.duration)}ms`),
+  }
+})
+console.log('STATE', JSON.stringify(state))
 await browser.close()

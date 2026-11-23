@@ -31,7 +31,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 4. `coverage`: first and last readable capture, month span, captures sampled, captures listed, sampling strategy;
 5. `checkedAt` timestamp.
 
-**Saved report output:** `{ id, savedAt, report }`. The report is stored exactly as computed, never recomputed on read. A save of the same `domain + path + checkedAt` is idempotent and returns the existing id.
+**Saved report output:** `{ id, savedAt, report }`. The API computes the report server-side from the URL and freezes that result; a client-supplied report object is ignored. The stored report is never recomputed on read. A save of the same `domain + path + checkedAt` is idempotent and returns the existing id.
 
 **Derived views (client-side, no new claims):**
 
@@ -95,7 +95,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | Handler routes, cache, limits, API index | `tests/api.test.ts` (15 tests) |
 | Sitemap parse and read | `tests/site.test.ts` (6 tests) |
 | Saved-report store | `tests/store.test.ts` (7 tests) |
-| Live read guards | `tests/live.test.ts` (33 tests) |
+| Live read guards | `tests/live.test.ts` (43 tests) |
 | CSV/JSON export | `tests/export.test.ts` (5 tests) |
 | Contract guards and comparison | `tests/contract.test.ts` (14 tests) |
 | Compare, word/char diff, monthly range | `tests/compare.test.ts` (13 tests) |

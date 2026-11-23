@@ -63,8 +63,14 @@ export function isPublicAddress(raw: string): boolean {
   if (isIP(address) === 6) {
     if (address === '::' || address === '::1') return false
     if (address.startsWith('::ffff:')) return isPublicAddress(address.slice(7))
+    // IPv4-compatible (deprecated), NAT64 and 6to4 can all embed a private IPv4
+    // address; reject the whole range instead of trying to unwrap it.
+    if (address.startsWith('::') && address.includes('.')) return false
+    if (address.startsWith('64:ff9b:')) return false
+    if (address.startsWith('2002:')) return false
     if (address.startsWith('fc') || address.startsWith('fd')) return false
     if (/^fe[89ab]/.test(address)) return false
+    if (/^fe[c-f]/.test(address)) return false
     if (address.startsWith('ff')) return false
     if (address.startsWith('2001:db8')) return false
     return true
@@ -91,8 +97,8 @@ async function resolvePublic(host: string, lookupImpl: Lookup): Promise<void> {
 /**
  * robots.txt group selection. A group naming this agent wins over `*`; within
  * the chosen groups the longest matching rule wins, and Allow wins a tie.
- * Wildcards (`*`) are supported; `$` anchors are rare enough to be ignored and
- * documented as such.
+ * Wildcards (`*`) and `$` end anchors are supported. `path` must include the
+ * query string, because RFC 9309 matches path plus query.
  */
 export function robotsAllows(text: string, path: string, agent = ENGINE): boolean {
   type Rule = { allow: boolean; path: string }
@@ -128,11 +134,12 @@ export function robotsAllows(text: string, path: string, agent = ENGINE): boolea
 
   const matches = (pattern: string): boolean => {
     if (!pattern) return false
-    const body = pattern
+    const anchored = pattern.endsWith('$')
+    const body = (anchored ? pattern.slice(0, -1) : pattern)
       .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
       .replace(/\*/g, '.*')
     try {
-      return new RegExp(`^${body}`).test(path)
+      return new RegExp(`^${body}${anchored ? '$' : ''}`).test(path)
     } catch {
       return false
     }
@@ -191,6 +198,7 @@ async function getSameHost(
   start: URL,
   signal: AbortSignal,
   headers: Record<string, string>,
+  guard?: (next: URL) => Promise<void>,
 ): Promise<{ response: Awaited<ReturnType<FetchLike>>; finalUrl: URL }> {
   let current = start
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
@@ -206,6 +214,9 @@ async function getSameHost(
       ) {
         throw new TimelineError('The page redirected to another site', 502)
       }
+      // Check the destination before fetching it: a redirect to a disallowed
+      // path must not be read "to discover" that it is disallowed.
+      if (guard) await guard(next)
       current = next
       continue
     }
@@ -236,22 +247,23 @@ async function robotsAllowsUrl(
       })
       if (response.ok) {
         text = await readCapped(response, 64_000)
-      } else if (response.status === 401 || response.status === 403) {
+      } else if (response.status !== 404 && response.status !== 410) {
+        // 401/403/5xx/other: the rules cannot be read, so do not read the page.
         text = 'User-agent: *\nDisallow: /'
       }
     } catch (error) {
       if ((error as Error)?.name === 'AbortError') throw error
-      // No reachable robots.txt is treated as "no rules", except when the host
-      // itself failed the public-address check — that must not be swallowed.
+      // A host that fails validation must not be swallowed.
       if (error instanceof TimelineError && /private address|resolve/.test(error.message)) throw error
-      text = ''
+      // Unreachable or off-host robots.txt is not "no rules". Fail closed.
+      text = 'User-agent: *\nDisallow: /'
     }
 
     if (robotsCache.size > 200) robotsCache.clear()
     robotsCache.set(key, { at: Date.now(), text })
   }
 
-  return robotsAllows(text, target.pathname)
+  return robotsAllows(text, `${target.pathname}${target.search}`)
 }
 
 export async function fetchLive(raw: string, options: LiveOptions = {}): Promise<LiveCheck> {
@@ -263,13 +275,25 @@ export async function fetchLive(raw: string, options: LiveOptions = {}): Promise
   } = options
 
   const target = normaliseTarget(raw)
-  await resolvePublic(target.hostname, lookupImpl)
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   const abortError = () => new TimelineError('The live page took too long to answer', 504)
 
   try {
+    // DNS is part of the budget. A slow resolver must not extend the documented
+    // 15-second ceiling just because the timer used to start after it.
+    await Promise.race([
+      resolvePublic(target.hostname, lookupImpl),
+      new Promise<never>((_, reject) => {
+        if (controller.signal.aborted) reject(abortError())
+        else
+          controller.signal.addEventListener('abort', () => reject(abortError()), {
+            once: true,
+          })
+      }),
+    ])
+
     const allowed = await robotsAllowsUrl(target, fetchImpl, controller.signal)
     if (!allowed) {
       throw new TimelineError('robots.txt asks this tool not to read that page', 403)
@@ -278,6 +302,13 @@ export async function fetchLive(raw: string, options: LiveOptions = {}): Promise
     const { response, finalUrl } = await getSameHost(fetchImpl, target, controller.signal, {
       'user-agent': USER_AGENT,
       accept: 'text/html,application/xhtml+xml',
+    }, async (next) => {
+      // Robots was checked for the requested path. Check the redirect target
+      // before that URL is fetched.
+      const nextAllowed = await robotsAllowsUrl(next, fetchImpl, controller.signal)
+      if (!nextAllowed) {
+        throw new TimelineError('robots.txt asks this tool not to read that page', 403)
+      }
     })
 
     if (!response.ok) {

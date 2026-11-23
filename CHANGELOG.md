@@ -39,10 +39,22 @@ Visual evidence: compare any two captures, read a monthly price range, and cite 
   chart aggregates by month and says so.
 - The chart axis uses round ticks instead of an observed-high midpoint that looked
   like a price tier.
+- **Security findings from the second review, all fixed:**
+  - robots.txt is now evaluated for the **path that will actually be read**,
+    including before following a same-host redirect. A redirect to a disallowed
+    path is refused without fetching it.
+  - robots.txt is matched against **path plus query** and supports `$` anchors.
+  - A missing rules file (5xx, unreadable, off-host redirect) now **fails closed**
+    instead of reading the page.
+  - IPv4-compatible, NAT64, 6to4 and site-local IPv6 ranges are rejected as
+    non-public, alongside the mapped/private ranges already covered.
+  - The 15-second budget now includes DNS resolution, not just HTTP.
+- Saved-report copy no longer claims to freeze "the exact response": the server
+  computes the frozen report, reusing the 10-minute cache when it can.
 
 ### Evidence
 
-- 144 unit tests (49 core, 15 handler, 6 sitemap, 7 store, 33 live, 5 export,
+- 154 unit tests (49 core, 15 handler, 6 sitemap, 7 store, 43 live, 5 export,
   14 contract, 13 compare, 2 citation); `pnpm check` green.
 - axe-core WCAG 2.1 A/AA: 0 violations on the report with both new panels.
 - Live report on 24 Nov 2026: 17 of 392 captures, 10 field changes; compare and

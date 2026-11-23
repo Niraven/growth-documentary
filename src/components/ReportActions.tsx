@@ -73,7 +73,7 @@ export function ReportActions({ report, savedId, savedAt, saving, onSave }: Prop
             {saving ? 'Saving…' : 'Save report'}
           </Button>
           <span className="hidden text-[11px] text-muted-foreground sm:inline">
-            Stores this exact copy on this machine
+            Stores a frozen server copy on this machine
           </span>
         </>
       )}

@@ -15,10 +15,10 @@
 
 ## Live check (SSRF posture)
 
-- Hostnames are resolved with `dns.lookup(..., { all: true })`; **every** address must be public. Loopback, private, link-local, CGNAT, documentation, multicast and IPv4-mapped ranges are rejected for IPv4 and IPv6.
-- Redirects are followed by hand, at most three hops, and must stay on the same hostname and port.
-- `robots.txt` is fetched first, from the same host, under the same rules. A disallow, or a 401/403 on `robots.txt`, returns 403 and the page is not requested.
-- HTML content type only; 2 MB byte cap; 15 s total budget; no cookies, no credentials, no JavaScript execution, no retries.
+- Hostnames are resolved with `dns.lookup(..., { all: true })`; **every** address must be public. Loopback, private, link-local, CGNAT, documentation, multicast, IPv4-mapped, IPv4-compatible, NAT64, 6to4 and site-local ranges are rejected for IPv4 and IPv6.
+- Redirects are followed by hand, at most three hops, and must stay on the same hostname and port. The redirect target's path is checked against `robots.txt` **before** it is fetched.
+- `robots.txt` is fetched first, from the same host, under the same rules, and cached as rules per origin — never as a per-origin verdict. It is evaluated per path **including the query string**, supports `*` and `$`, and a disallow returns 403 before the page is requested. A `robots.txt` that cannot be read (5xx, network failure, off-host redirect) fails closed.
+- HTML content type only; 2 MB byte cap; 15 s total budget **including DNS**; no cookies, no credentials, no JavaScript execution, no retries.
 - Known residual: DNS is resolved immediately before the request, but Node's `fetch` resolves again. A hostile DNS server could rebind between the two answers. The window is small, the response is parsed as text only, and this is a self-hosted tool, but it is not a full DNS-pinning implementation. Upgrade path: connect to the validated IP with a custom agent and a Host header.
 
 ## Saved report storage

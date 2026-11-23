@@ -67,7 +67,7 @@ Then it compares consecutive captures and keeps only observed differences. A fie
 
 ## Saved reports and export
 
-**Save report** freezes the exact response — captures, changes, coverage — in `data/reports.json` on the machine running the server. It gets an id and a stable link (`#report/<id>`), so the same report can be reopened later even after a rebuild would produce different data.
+**Save report** freezes a server-computed report for that URL — captures, changes, coverage — in `data/reports.json` on the machine running the server. If the same URL was just built, the 10-minute cache is reused; otherwise the server computes a fresh one. The saved copy is never recomputed on read. It gets an id and a stable link (`#report/<id>`), so it can be reopened later even after a rebuild would produce different data.
 
 Saved reports are local only: one JSON file, at most 200, atomic writes, `0600`. There is no account and no upload. The id is random, not guessable, but it is also not a permission system — anyone who can reach the server can read saved reports.
 
@@ -215,6 +215,8 @@ A crawler can tell you what a page says now. It cannot tell you what the page sa
 
 When a page is not archived at all, the honest answer is "no captures", not a scrape dressed up as history. The live check is offered as a separate, clearly labelled current-page read.
 
+Source matrix, planned adapters and the inclusion rule for adding a source: [`docs/SOURCES.md`](docs/SOURCES.md).
+
 ## Scripts
 
 | Command | Does |
@@ -222,7 +224,7 @@ When a page is not archived at all, the honest answer is "no captures", not a sc
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 144 unit tests (vitest) |
+| `pnpm test` | 154 unit tests (vitest) |
 | `pnpm lint` | oxlint |
 | `pnpm a11y` | axe-core scan of a running build (0 violations at v0.5.0) |
 | `pnpm check` | lint + test + build |

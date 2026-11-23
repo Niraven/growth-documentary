@@ -40,6 +40,10 @@ describe('isPublicAddress', () => {
     '0.0.0.0',
     '::1',
     '::',
+    '::127.0.0.1',
+    '64:ff9b::7f00:1',
+    '2002:7f00:1::',
+    'fec0::1',
     'fd00::1',
     'fe80::1',
     '2001:db8::1',
@@ -86,6 +90,18 @@ describe('robotsAllows', () => {
 
   it('treats an empty disallow as no restriction', () => {
     expect(robotsAllows('User-agent: *\nDisallow:\n', '/pricing')).toBe(true)
+  })
+
+  it('matches path plus query, not just the path', () => {
+    const text = 'User-agent: *\nDisallow: /pricing?private=1\n'
+    expect(robotsAllows(text, '/pricing?private=1')).toBe(false)
+    expect(robotsAllows(text, '/pricing?public=1')).toBe(true)
+  })
+
+  it('honours a $ end anchor', () => {
+    const text = 'User-agent: *\nDisallow: /*.json$\n'
+    expect(robotsAllows(text, '/data/prices.json')).toBe(false)
+    expect(robotsAllows(text, '/data/prices.json?x=1')).toBe(true)
   })
 })
 
@@ -184,6 +200,85 @@ describe('fetchLive', () => {
       lookupImpl: lookup,
     })
     expect(allowed.title).toBe('Allowed')
+  })
+
+  it('fails closed when robots.txt cannot be read', async () => {
+    const urls: string[] = []
+    const fetchImpl: FetchLike = async (url) => {
+      urls.push(url)
+      if (url.endsWith('/robots.txt')) return { ...robots404, status: 500 }
+      return htmlResponse('<title>Should not be read</title>')
+    }
+
+    await expect(
+      fetchLive('robots-500-check.com/pricing', { fetchImpl, lookupImpl: lookup }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(urls.some((url) => url.includes('/pricing') && !url.endsWith('/robots.txt'))).toBe(false)
+  })
+
+  it('fails closed when robots.txt redirects off-host', async () => {
+    const fetchImpl: FetchLike = async (url) => {
+      if (url.endsWith('/robots.txt')) {
+        return {
+          ...robots404,
+          status: 302,
+          headers: { get: () => 'https://other-check.com/robots.txt' },
+        }
+      }
+      return htmlResponse('<title>Should not be read</title>')
+    }
+
+    await expect(
+      fetchLive('robots-redirect-check.com/pricing', { fetchImpl, lookupImpl: lookup }),
+    ).rejects.toMatchObject({ status: 403 })
+  })
+
+  it('re-checks robots.txt for the path a same-host redirect lands on', async () => {
+    const paths: string[] = []
+    const fetchImpl: FetchLike = async (url) => {
+      if (url.endsWith('/robots.txt')) {
+        return {
+          ...robots404,
+          ok: true,
+          status: 200,
+          text: async () => 'User-agent: *\nDisallow: /private\n',
+        }
+      }
+      const parsed = new URL(url)
+      paths.push(parsed.pathname)
+      if (parsed.pathname === '/pricing') {
+        return {
+          ...robots404,
+          status: 302,
+          headers: { get: () => '/private' },
+        }
+      }
+      return htmlResponse('<title>Private</title>')
+    }
+
+    await expect(
+      fetchLive('redirect-path-check.com/pricing', { fetchImpl, lookupImpl: lookup }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(paths).toContain('/pricing')
+    expect(paths).not.toContain('/private')
+  })
+
+  it('counts DNS time against the total budget', async () => {
+    const started = Date.now()
+    const fetchImpl: FetchLike = async () => {
+      throw new Error('fetch should not run')
+    }
+    await expect(
+      fetchLive('slow-dns-check.com/pricing', {
+        fetchImpl,
+        lookupImpl: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 300))
+          return [{ address: '93.184.216.34', family: 4 }]
+        },
+        timeoutMs: 60,
+      }),
+    ).rejects.toMatchObject({ status: 504 })
+    expect(Date.now() - started).toBeLessThan(250)
   })
 
   it('refuses a redirect to another host', async () => {

@@ -43,6 +43,8 @@ describe('isPublicAddress', () => {
     '::127.0.0.1',
     '::7f00:1',
     '0:0:0:0:0:ffff:127.0.0.1',
+    '::ffff:0:7f00:1',
+    '::ffff:0:127.0.0.1',
     '64:ff9b::7f00:1',
     '2002:7f00:1::',
     'fec0::1',
@@ -104,6 +106,29 @@ describe('robotsAllows', () => {
     const text = 'User-agent: *\nDisallow: /*.json$\n'
     expect(robotsAllows(text, '/data/prices.json')).toBe(false)
     expect(robotsAllows(text, '/data/prices.json?x=1')).toBe(true)
+  })
+
+  it('honours unanchored wildcard rules as prefixes', () => {
+    const cases: Array<[string, string, boolean]> = [
+      ['/*?', '/pricing?x=1', false],
+      ['/*.pdf', '/docs/a.pdf?dl=1', false],
+      ['/*/print', '/a/print/x', false],
+      ['/a*b', '/axxbc', false],
+      ['*a', '/bab', false],
+      ['/private', '/private/x', false],
+      ['/private$', '/private/x', true],
+      ['/*.json$', '/a.json?x', true],
+      ['/*.json', '/a.json?x', false],
+      ['/*.json', '/a.json', false],
+      ['/pricing', '/pricing?x', false],
+      ['/a*b$', '/axxbc', true],
+    ]
+    for (const [pattern, path, allowed] of cases) {
+      expect(
+        robotsAllows(`User-agent: *\nDisallow: ${pattern}\n`, path),
+        `${pattern} against ${path}`,
+      ).toBe(allowed)
+    }
   })
 
   it('does not backtrack catastrophically on a hostile wildcard pattern', () => {

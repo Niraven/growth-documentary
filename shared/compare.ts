@@ -180,7 +180,11 @@ export function monthlyPrices(prices: string[]): number[] {
   for (const price of prices) {
     // Per-seat rates are still "/mo" strings; plotting them beside plan prices
     // would compare different units. The caption says they are excluded.
-    if (/\bper\s+(?:seat|user|member|workspace)\b|\/\s*(?:seat|user|member|workspace)\b/i.test(price)) {
+    if (
+      /\bper\s+(?!(?:month|mo|year|yr|quarter|week|day|annum)\b)[a-z][a-z-]*|\/\s*(?:seat|user|member|admin|employee|agent|workspace)\b/i.test(
+        price,
+      )
+    ) {
       continue
     }
     const match = /^\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*(?:mo|month)\b/i.exec(price.trim())

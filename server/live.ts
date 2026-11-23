@@ -112,6 +112,18 @@ export function isPublicAddress(raw: string): boolean {
       return isPublicAddress(`${bytes[12]}.${bytes[13]}.${bytes[14]}.${bytes[15]}`)
     }
 
+    // IPv4-translated (::ffff:0:0/96): bytes 8-9 are ffff, bytes 10-11 are zero,
+    // and the IPv4 address lives in the last four bytes.
+    if (
+      bytes.slice(0, 8).every((byte) => byte === 0) &&
+      bytes[8] === 0xff &&
+      bytes[9] === 0xff &&
+      bytes[10] === 0 &&
+      bytes[11] === 0
+    ) {
+      return isPublicAddress(`${bytes[12]}.${bytes[13]}.${bytes[14]}.${bytes[15]}`)
+    }
+
     // NAT64 and 6to4 embed IPv4 in ranges that do not prove the embedded address.
     if (bytes[0] === 0x00 && bytes[1] === 0x64 && bytes[2] === 0xff && bytes[3] === 0x9b) return false
     if (bytes[0] === 0x20 && bytes[1] === 0x02) return false
@@ -148,39 +160,38 @@ const MAX_ROBOTS_RULES = 500
 /**
  * Wildcard match without a regex. A robots.txt pattern is attacker-controlled
  * and a compiled `.*` chain backtracks catastrophically on a long path; this
- * two-pointer matcher is bounded by pattern length × path length and cannot
- * block the event loop on a hostile file.
+ * dynamic-programming matcher is bounded by pattern length × path length and
+ * cannot block the event loop on a hostile file.
+ *
+ * Unanchored rules match a prefix, per RFC 9309. Appending a trailing `*`
+ * turns prefix matching into a full match without a second code path.
  */
 function globMatches(pattern: string, text: string): boolean {
   if (!pattern) return false
   const anchored = pattern.endsWith('$')
-  const glob = anchored ? pattern.slice(0, -1) : pattern
-  if (!glob.includes('*')) return anchored ? text === glob : text.startsWith(glob)
+  const glob = anchored ? pattern.slice(0, -1) : `${pattern}*`
+  if (!glob) return false
 
-  let p = 0
-  let t = 0
-  let star = -1
-  let mark = 0
-  while (t < text.length) {
-    if (p < glob.length && glob[p] === text[t]) {
-      p += 1
-      t += 1
-    } else if (p < glob.length && glob[p] === '*') {
-      star = p
-      p += 1
-      mark = t
-    } else if (star !== -1) {
-      p = star + 1
-      mark += 1
-      t = mark
-    } else if (p === glob.length) {
-      return !anchored
+  const length = text.length
+  let previous = new Uint8Array(length + 1)
+  previous[0] = 1
+
+  for (let p = 0; p < glob.length; p += 1) {
+    const next = new Uint8Array(length + 1)
+    if (glob[p] === '*') {
+      next[0] = previous[0]
+      for (let t = 1; t <= length; t += 1) {
+        next[t] = previous[t] === 1 || next[t - 1] === 1 ? 1 : 0
+      }
     } else {
-      return false
+      for (let t = 1; t <= length; t += 1) {
+        next[t] = previous[t - 1] === 1 && text[t - 1] === glob[p] ? 1 : 0
+      }
     }
+    previous = next
   }
-  while (p < glob.length && glob[p] === '*') p += 1
-  return p === glob.length
+
+  return previous[length] === 1
 }
 
 /**

@@ -95,7 +95,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | Handler routes, cache, limits, API index | `tests/api.test.ts` (15 tests) |
 | Sitemap parse and read | `tests/site.test.ts` (6 tests) |
 | Saved-report store | `tests/store.test.ts` (7 tests) |
-| Live read guards | `tests/live.test.ts` (47 tests) |
+| Live read guards | `tests/live.test.ts` (50 tests) |
 | CSV/JSON export | `tests/export.test.ts` (5 tests) |
 | Contract guards and comparison | `tests/contract.test.ts` (14 tests) |
 | Compare, word/char diff, monthly range | `tests/compare.test.ts` (14 tests) |

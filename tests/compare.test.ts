@@ -105,7 +105,16 @@ describe('monthlyPrices', () => {
   })
 
   it('excludes per-seat rates even when they carry a monthly suffix', () => {
-    expect(monthlyPrices(['$15/mo per seat', '$8.75/user/mo', '$49/mo'])).toEqual([49])
+    expect(
+      monthlyPrices([
+        '$15/mo per seat',
+        '$8.75/user/mo',
+        '$15/mo per admin',
+        '$15/mo per employee',
+        '$15/mo per agent',
+        '$49/mo',
+      ]),
+    ).toEqual([49])
   })
 
   it('dedupes repeated amounts', () => {

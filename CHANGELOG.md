@@ -50,14 +50,16 @@ Visual evidence: compare any two captures, read a monthly price range, and cite 
     non-public, alongside the mapped/private ranges already covered.
   - The 15-second budget now includes DNS resolution, not just HTTP.
   - The robots matcher no longer compiles attacker-controlled patterns to
-    regexes: a bounded wildcard matcher plus rule-length and rule-count caps
-    removes the catastrophic-backtracking stall. A hostile-pattern regression
-    test asserts the match stays under 50 ms.
+    regexes: a bounded dynamic-programming wildcard matcher plus rule-length and
+    rule-count caps removes the catastrophic-backtracking stall. A hostile-pattern
+    regression test asserts the match stays under 50 ms.
+  - Unanchored wildcard rules are matched as **prefixes** again; a 12-case table
+    covers `/*?`, `/*.pdf`, `/*/print`, `*a`, query suffixes and `$` anchors.
   - IPv6 addresses are parsed to bytes, so IPv4-compatible forms such as
-    `::7f00:1` and uncompressed IPv4-mapped forms are rejected too, not only
-    their canonical spellings.
-- Price range excludes per-seat `/mo` strings (`$15/mo per seat`), matching the
-  caption, and preserves cents (`$8.75`, not `$9`).
+    `::7f00:1`, uncompressed IPv4-mapped forms and IPv4-translated forms are
+    rejected too, not only their canonical spellings.
+- Price range excludes per-unit `/mo` strings (`$15/mo per seat`, `per admin`,
+  `$8.75/user/mo`), matching the caption, and preserves cents (`$8.75`, not `$9`).
 - Citations use the local calendar date, matching the saved/read timestamps in
   the UI.
 - Saved-report copy no longer claims to freeze "the exact response": the server
@@ -65,8 +67,8 @@ Visual evidence: compare any two captures, read a monthly price range, and cite 
 
 ### Evidence
 
-- 159 unit tests (49 core, 15 handler, 6 sitemap, 7 store, 47 live, 5 export,
-  14 contract, 13 compare, 2 citation); `pnpm check` green.
+- 162 unit tests (49 core, 15 handler, 6 sitemap, 7 store, 50 live, 5 export,
+  14 contract, 14 compare, 2 citation); `pnpm check` green.
 - axe-core WCAG 2.1 A/AA: 0 violations on the report with both new panels.
 - Live report on 24 Nov 2026: 17 of 392 captures, 10 field changes; compare and
   chart reviewed at full resolution.

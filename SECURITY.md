@@ -15,7 +15,7 @@
 
 ## Live check (SSRF posture)
 
-- Hostnames are resolved with `dns.lookup(..., { all: true })`; **every** address must be public. IPv6 is parsed to bytes, so IPv4-compatible, IPv4-mapped, NAT64, 6to4, site-local, link-local, unique-local, multicast, documentation and loopback forms are rejected in canonical and expanded spellings. IPv4 private, loopback, link-local, CGNAT, documentation and multicast ranges are rejected.
+- Hostnames are resolved with `dns.lookup(..., { all: true })`; **every** address must be public. IPv6 is parsed to bytes, so IPv4-compatible, IPv4-mapped, IPv4-translated, NAT64, 6to4, site-local, link-local, unique-local, multicast, documentation and loopback forms are rejected in canonical and expanded spellings. IPv4 private, loopback, link-local, CGNAT, documentation and multicast ranges are rejected.
 - Redirects are followed by hand, at most three hops, and must stay on the same hostname and port. The redirect target's path is checked against `robots.txt` **before** it is fetched.
 - `robots.txt` is fetched first, from the same host, under the same rules, and cached as rules per origin — never as a per-origin verdict. It is evaluated per path **including the query string**, supports `*` and `$`, and uses a bounded wildcard matcher rather than a regex; rules over 256 characters or a file over 500 rules fail closed. A disallow returns 403 before the page is requested. A `robots.txt` that cannot be read (5xx, network failure, off-host redirect) fails closed.
 - HTML content type only; 2 MB byte cap; 15 s total budget **including DNS**; no cookies, no credentials, no JavaScript execution, no retries.

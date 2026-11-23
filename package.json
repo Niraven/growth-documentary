@@ -5,6 +5,14 @@
   "license": "MIT",
   "private": false,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Niraven/growth-documentary.git"
+  },
+  "homepage": "https://github.com/Niraven/growth-documentary#readme",
+  "bugs": {
+    "url": "https://github.com/Niraven/growth-documentary/issues"
+  },
   "engines": {
     "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
   },

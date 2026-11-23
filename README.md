@@ -1,5 +1,8 @@
 # Growth Documentary
 
+[![CI](https://github.com/Niraven/growth-documentary/actions/workflows/ci.yml/badge.svg)](https://github.com/Niraven/growth-documentary/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **A dated, sourced record of what changed on a public page.**
 
 Paste a pricing page. Get a timeline of what changed on it, with the archived page behind every line. No estimates, no causal claims, no dashboard — just receipts you can quote.
@@ -131,7 +134,7 @@ Not started, not claimed. The current build is the one described above.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). The product spec lives in [docs/SPEC.md](docs/SPEC.md) — changes that widen scope should update it first.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). The product spec lives in [docs/SPEC.md](docs/SPEC.md) — changes that widen scope should update it first. Release notes are in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

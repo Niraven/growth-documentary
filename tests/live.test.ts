@@ -134,6 +134,58 @@ describe('fetchLive', () => {
     expect(check.robots).toBe('allowed')
   })
 
+  it('reuses robots.txt rules without leaking one path’s verdict into another', async () => {
+    const urls: string[] = []
+    const fetchImpl: FetchLike = async (url) => {
+      urls.push(url)
+      if (url.endsWith('/robots.txt')) {
+        return {
+          ...robots404,
+          ok: true,
+          status: 200,
+          text: async () => 'User-agent: *\nDisallow: /private\n',
+        }
+      }
+      return htmlResponse('<title>Allowed</title><h1>Page</h1>')
+    }
+
+    const allowed = await fetchLive('cache-path-check.com/pricing', {
+      fetchImpl,
+      lookupImpl: lookup,
+    })
+    expect(allowed.title).toBe('Allowed')
+
+    await expect(
+      fetchLive('cache-path-check.com/private/secret', { fetchImpl, lookupImpl: lookup }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(urls.filter((url) => url.endsWith('/robots.txt'))).toHaveLength(1)
+    expect(urls.some((url) => url.includes('/private/secret'))).toBe(false)
+  })
+
+  it('does not let a disallowed first path poison an allowed one', async () => {
+    const fetchImpl: FetchLike = async (url) => {
+      if (url.endsWith('/robots.txt')) {
+        return {
+          ...robots404,
+          ok: true,
+          status: 200,
+          text: async () => 'User-agent: *\nDisallow: /private\n',
+        }
+      }
+      return htmlResponse('<title>Allowed</title><h1>Page</h1>')
+    }
+
+    await expect(
+      fetchLive('cache-order-check.com/private', { fetchImpl, lookupImpl: lookup }),
+    ).rejects.toMatchObject({ status: 403 })
+
+    const allowed = await fetchLive('cache-order-check.com/pricing', {
+      fetchImpl,
+      lookupImpl: lookup,
+    })
+    expect(allowed.title).toBe('Allowed')
+  })
+
   it('refuses a redirect to another host', async () => {
     const fetchImpl: FetchLike = async (url) => {
       if (url.endsWith('/robots.txt')) return robots404

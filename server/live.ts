@@ -31,7 +31,7 @@ export type LiveOptions = {
 
 const MAX_REDIRECTS = 3
 const ROBOTS_TTL_MS = 10 * 60 * 1000
-const robotsCache = new Map<string, { at: number; allows: boolean }>()
+const robotsCache = new Map<string, { at: number; text: string }>()
 const ENGINE = 'growth-documentary'
 
 const defaultLookup: Lookup = async (host) =>
@@ -221,31 +221,37 @@ async function robotsAllowsUrl(
 ): Promise<boolean> {
   const key = target.origin
   const hit = robotsCache.get(key)
-  if (hit && Date.now() - hit.at < ROBOTS_TTL_MS) return hit.allows
-
-  const robots = new URL('/robots.txt', target.origin)
-  let allows = true
-  try {
-    const { response } = await getSameHost(fetchImpl, robots, signal, {
-      'user-agent': USER_AGENT,
-      accept: 'text/plain',
-    })
-    if (response.ok) {
-      allows = robotsAllows(await readCapped(response, 64_000), target.pathname)
-    } else if (response.status === 401 || response.status === 403) {
-      allows = false
+  let text: string
+  if (hit && Date.now() - hit.at < ROBOTS_TTL_MS) {
+    // Cache the rules, never the verdict: the same origin can allow /pricing
+    // and disallow /private, and a per-origin verdict would leak one path's
+    // answer into the other.
+    text = hit.text
+  } else {
+    text = ''
+    try {
+      const { response } = await getSameHost(fetchImpl, new URL('/robots.txt', target.origin), signal, {
+        'user-agent': USER_AGENT,
+        accept: 'text/plain',
+      })
+      if (response.ok) {
+        text = await readCapped(response, 64_000)
+      } else if (response.status === 401 || response.status === 403) {
+        text = 'User-agent: *\nDisallow: /'
+      }
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError') throw error
+      // No reachable robots.txt is treated as "no rules", except when the host
+      // itself failed the public-address check — that must not be swallowed.
+      if (error instanceof TimelineError && /private address|resolve/.test(error.message)) throw error
+      text = ''
     }
-  } catch (error) {
-    if ((error as Error)?.name === 'AbortError') throw error
-    // No reachable robots.txt is treated as "no rules", except when the host
-    // itself failed the public-address check — that must not be swallowed.
-    if (error instanceof TimelineError && /private address|resolve/.test(error.message)) throw error
-    allows = true
+
+    if (robotsCache.size > 200) robotsCache.clear()
+    robotsCache.set(key, { at: Date.now(), text })
   }
 
-  if (robotsCache.size > 200) robotsCache.clear()
-  robotsCache.set(key, { at: Date.now(), allows })
-  return allows
+  return robotsAllows(text, target.pathname)
 }
 
 export async function fetchLive(raw: string, options: LiveOptions = {}): Promise<LiveCheck> {

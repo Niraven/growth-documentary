@@ -1,6 +1,6 @@
 # Product spec — Growth Documentary
 
-Status: implemented (v0.4.0). This file is the contract; the README explains usage.
+Status: implemented (v0.5.0). This file is the contract; the README explains usage.
 
 ## Problem
 
@@ -33,6 +33,12 @@ When I need to show what a competitor changed on a public page, I want a dated l
 
 **Saved report output:** `{ id, savedAt, report }`. The report is stored exactly as computed, never recomputed on read. A save of the same `domain + path + checkedAt` is idempotent and returns the existing id.
 
+**Derived views (client-side, no new claims):**
+
+- **Compare:** any two readable captures from the same report. Page title uses a character-level LCS; headline uses a word-level LCS; a replacement with less than 35% shared words is shown as two whole states, not an interleaved sentence. Price deltas are labelled Removed/Added.
+- **Monthly price range:** one bar per month in which monthly (`/mo`, `/month`) price strings were read. Each bar is the min–max of those strings; annual, one-time and per-seat amounts are excluded. With fewer than two such months the chart is not rendered.
+- **Citation:** coverage window, captures read, field changes (baseline excluded), access date, source link.
+
 **Live check output:** `{ domain, path, fetchedAt, finalUrl, title, h1, prices, robots: "allowed" }`. It is not a `Capture`, has no archive timestamp, and never enters the timeline.
 
 **Site output:** page count, dated entries, additions per month, archived copy date, and a plain note when no sitemap exists.
@@ -57,6 +63,8 @@ When I need to show what a competitor changed on a public page, I want a dated l
 - The dated timeline reads only from `web.archive.org`; sitemaps are read from their archived copy.
 - The live check is opt-in, per-request, and runs only after robots.txt allows it.
 - Saved reports are local, bounded, and written atomically; they are never recomputed on read.
+- A comparison view may only use captures already present in the report; it may not fetch or infer a missing capture.
+- A price chart may only plot monthly amounts that were actually extracted; it may not interpolate or impute a missing month.
 
 **Saved report limits**
 
@@ -84,12 +92,14 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | Check | Evidence |
 |---|---|
 | Extraction, diff, sampling | `tests/core.test.ts` (49 tests) |
-| Handler routes, cache, limits | `tests/api.test.ts` (14 tests) |
+| Handler routes, cache, limits, API index | `tests/api.test.ts` (15 tests) |
 | Sitemap parse and read | `tests/site.test.ts` (6 tests) |
 | Saved-report store | `tests/store.test.ts` (7 tests) |
-| Live read guards | `tests/live.test.ts` (31 tests) |
+| Live read guards | `tests/live.test.ts` (33 tests) |
 | CSV/JSON export | `tests/export.test.ts` (5 tests) |
 | Contract guards and comparison | `tests/contract.test.ts` (14 tests) |
+| Compare, word/char diff, monthly range | `tests/compare.test.ts` (13 tests) |
+| Citation text | `tests/citation.test.ts` (2 tests) |
 | Type-check + production build | `pnpm build` |
 | Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 field changes, 24 months |
 | Saved report | 24 Nov 2026: save → list → reopen `#report/<id>` → delete, all through the HTTP API |
@@ -114,6 +124,8 @@ UI (React) ── GET  /api/timeline?url=… ──┐
 ```
 
 `server/core.ts`, `server/site.ts`, `server/live.ts` and `server/store.ts` are framework-free and injectable (`fetchImpl`, `lookupImpl`, `delayMs`, `timeoutMs`, file path), which is what makes the tests deterministic.
+
+`shared/compare.ts` is client-safe pure logic: word and character LCS, capture comparison, monthly price parsing. `src/lib/citation.ts` is pure text. Neither module can fetch, so a derived view can never invent a capture.
 
 ## Error taxonomy
 

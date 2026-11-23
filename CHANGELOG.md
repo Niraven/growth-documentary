@@ -4,6 +4,50 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-11-24
+
+Visual evidence: compare any two captures, read a monthly price range, and cite the report.
+
+### Added
+
+- **Compare captures.** Two selectors over the captures already read, side by side.
+  Page title uses a character-level diff so `Basecamp: Pricing` → `Basecamp — Pricing`
+  reads as a punctuation swap, not a replaced word. Headline uses a word diff;
+  when less than 35% of words are shared, both states are shown whole instead of
+  weaving two sentences into one that neither capture contained.
+- **Monthly price range.** One bar per month with monthly price strings: the
+  lowest and highest amount read that month. Annual, one-time and per-seat
+  amounts are excluded; the caption calls it a range, not an index.
+- **Cite.** Copies a citation with the coverage window, captures read, field
+  changes, access date and source link.
+- **`GET /api`** returns the endpoint list, version and docs link.
+
+### Changed
+
+- Price lists in compare are sorted by numeric amount, not lexicographically.
+- Price removals/additions are labelled words, not minus/plus glyphs that read as
+  negative prices.
+- The design-system page, price range and compare views are lazy-loaded; main
+  bundle is 489.8 kB (152.2 kB gzip), down from 500 kB.
+
+### Fixed
+
+- Word diff could show an insertion before its replacement, producing impossible
+  sentences; removals now read first and whole replacements are not interleaved.
+- Character-level diff makes punctuation-only title changes legible.
+- Price range bars no longer overlap when several captures fall in one month; the
+  chart aggregates by month and says so.
+- The chart axis uses round ticks instead of an observed-high midpoint that looked
+  like a price tier.
+
+### Evidence
+
+- 144 unit tests (49 core, 15 handler, 6 sitemap, 7 store, 33 live, 5 export,
+  14 contract, 13 compare, 2 citation); `pnpm check` green.
+- axe-core WCAG 2.1 A/AA: 0 violations on the report with both new panels.
+- Live report on 24 Nov 2026: 17 of 392 captures, 10 field changes; compare and
+  chart reviewed at full resolution.
+
 ## [0.4.0] — 2026-11-24
 
 Saved reports, exports, and an opt-in live check that is deliberately not history.
@@ -138,5 +182,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.5.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.5.0
+[0.4.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.4.0
 [0.3.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.2.0

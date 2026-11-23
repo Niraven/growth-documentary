@@ -1,9 +1,14 @@
+import { Suspense, lazy } from 'react'
 import { ExternalLink, FileSearch, Loader2 } from 'lucide-react'
 import type { Change as LiveChange, Capture as LiveCapture, Timeline as LiveData } from '../../shared/timeline'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CoverageStrip } from '@/components/CoverageStrip'
 import { SiteGrowth } from '@/components/SiteGrowth'
+
+const PriceTrail = lazy(() =>
+  import('@/components/PriceTrail').then((module) => ({ default: module.PriceTrail })),
+)
 
 export type { LiveCapture, LiveChange, LiveData }
 
@@ -153,6 +158,9 @@ export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string
           there are fewer ticks than rows. The index is capped at 400 snapshots, so the space
           between dots is unread — not unchanged.
         </p>
+        <Suspense fallback={null}>
+          <PriceTrail captures={data.captures} />
+        </Suspense>
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">

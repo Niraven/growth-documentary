@@ -34,7 +34,7 @@ type CacheEntry = { at: number; payload: string }
 type Bucket = { count: number; reset: number }
 type Scope = 'report' | 'site' | 'live' | 'save'
 
-const VERSION = '0.4.0'
+const VERSION = '0.5.0'
 const SAVED_ID = /^[A-Za-z0-9_-]{6,24}$/
 
 function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
@@ -174,6 +174,29 @@ export function createApi(options: ApiOptions = {}) {
     const url = new URL(req.url ?? '/', 'http://localhost')
     const route = url.pathname.replace(/\/+$/, '') || '/'
     const method = req.method ?? 'GET'
+
+    if (route === '/') {
+      if (method !== 'GET' && method !== 'HEAD') {
+        send(res, 405, { error: 'GET only' }, { allow: 'GET, HEAD' })
+        return
+      }
+      send(res, 200, {
+        name: 'growth-documentary',
+        version: VERSION,
+        docs: 'https://github.com/Niraven/growth-documentary#api',
+        endpoints: [
+          { method: 'GET', path: '/api/timeline?url=', purpose: 'dated archive timeline' },
+          { method: 'GET', path: '/api/site?url=', purpose: 'archived sitemap size' },
+          { method: 'GET', path: '/api/live?url=', purpose: 'opt-in current page read' },
+          { method: 'GET', path: '/api/reports', purpose: 'saved report summaries' },
+          { method: 'POST', path: '/api/reports', purpose: 'freeze a report' },
+          { method: 'GET', path: '/api/reports/:id', purpose: 'read a frozen report' },
+          { method: 'DELETE', path: '/api/reports/:id', purpose: 'remove a frozen report' },
+          { method: 'GET', path: '/api/health', purpose: 'version and uptime' },
+        ],
+      })
+      return
+    }
 
     if (route === '/health') {
       if (method !== 'GET' && method !== 'HEAD') {

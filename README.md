@@ -43,6 +43,16 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 **Changes.** Consecutive readable captures are compared field by field. The first row is the baseline, not a change. Same-day field changes are grouped under one date.
 
+**Compare.** Pick any two captures and see them side by side. The page title uses a character-level diff (`Basecamp: Pricing` → `Basecamp — Pricing`); the headline uses a word-level diff, and a wholesale replacement is shown as two whole states rather than an invented sentence. Price removals and additions are labelled, not encoded as negative numbers.
+
+![Compare two archived captures](docs/compare.png)
+
+**Monthly price range.** When at least two months contain monthly price strings, a small chart shows one bar per month: the lowest and highest monthly amount read that month. Annual, one-time and per-seat amounts are excluded; the caption says it is a range, not an index.
+
+![Monthly price range per capture month](docs/price-range.png)
+
+**Citation.** One button copies a ready-to-paste citation with the coverage window, captures read, field changes, access date and source link.
+
 **Site size.** In parallel, the site's archived sitemap is read for a page count and — when the site publishes `lastmod` dates — additions per month. When those dates cluster into one month, the panel says so instead of drawing a growth curve the data cannot support.
 
 For each capture it extracts three things:
@@ -92,6 +102,7 @@ Those limits are deliberate. A tool that guesses is worse than a tool that says 
 ## API
 
 ```http
+GET    /api
 GET    /api/timeline?url=stripe.com/pricing
 GET    /api/site?url=stripe.com/pricing
 GET    /api/live?url=stripe.com/pricing
@@ -101,6 +112,8 @@ GET    /api/reports/:id
 DELETE /api/reports/:id
 GET    /api/health
 ```
+
+`GET /api` returns the endpoint list, version and docs link, so a client can discover the surface without reading source.
 
 `200` returns:
 
@@ -176,9 +189,11 @@ Rate limits per client per minute: 8 timelines, 20 sitemap reads, 4 live checks,
 
 ```
 shared/timeline.ts   contract, guards, snapshot comparison, used by both sides
+shared/compare.ts    word/char diff, capture comparison, monthly price parsing
 src/                 React 19 UI (Vite, Tailwind 4, Radix, shadcn-style primitives)
-  components/        report, coverage, site panel, saved list, live panel, actions
+  components/        report, coverage, price range, compare, saved list, live panel
   lib/export.ts      CSV (formula-safe) and JSON downloads
+  lib/citation.ts    ready-to-paste citation
 server/
   archive.ts         archive transport: CDX + snapshots, origin-locked
   core.ts            pure extraction, diff and adaptive sampling (no HTTP)
@@ -194,6 +209,12 @@ The API is a Vite plugin with `configureServer` **and** `configurePreviewServer`
 
 Data source: [Internet Archive Wayback Machine](https://web.archive.org/) CDX + snapshot endpoints for the timeline. The optional live check contacts the target's own host once, on demand, after `robots.txt` permits it; it never feeds the dated timeline. The browser talks only to this server.
 
+### Why the Archive, not a crawler
+
+A crawler can tell you what a page says now. It cannot tell you what the page said on a date, because it was not there. The dated rows therefore come from the one public API that stores dated captures. A second historical source would need its own crawl date and provenance label before it could join a timeline; without that, it is a current-page read wearing a date's clothes.
+
+When a page is not archived at all, the honest answer is "no captures", not a scrape dressed up as history. The live check is offered as a separate, clearly labelled current-page read.
+
 ## Scripts
 
 | Command | Does |
@@ -201,9 +222,9 @@ Data source: [Internet Archive Wayback Machine](https://web.archive.org/) CDX + 
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 126 unit tests (vitest) |
+| `pnpm test` | 144 unit tests (vitest) |
 | `pnpm lint` | oxlint |
-| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.4.0) |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.5.0) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting

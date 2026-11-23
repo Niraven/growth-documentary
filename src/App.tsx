@@ -20,6 +20,9 @@ import { ReportActions } from '@/components/ReportActions'
 import { SavedReports } from '@/components/SavedReports'
 
 const Gallery = lazy(() => import('@/components/Gallery'))
+const CompareCaptures = lazy(() =>
+  import('@/components/CompareCaptures').then((module) => ({ default: module.CompareCaptures })),
+)
 
 type View = 'report' | 'saved' | 'system' | 'how'
 
@@ -512,6 +515,11 @@ export default function App() {
               </div>
             )}
             {live && !loading && <LivePanel report={live} />}
+            {live && !loading && (
+              <Suspense fallback={null}>
+                <CompareCaptures captures={live.captures} />
+              </Suspense>
+            )}
             {!live && !loading && <EmptyState onPick={pick} />}
           </main>
         )}

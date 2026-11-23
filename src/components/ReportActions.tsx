@@ -1,9 +1,10 @@
-import { Bookmark, Check, Download, Link2, Loader2 } from 'lucide-react'
+import { Bookmark, Check, Download, Link2, Loader2, Quote } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Timeline } from '../../shared/timeline'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { downloadFile, reportCsv, reportJson, reportSlug } from '@/lib/export'
+import { citationFor } from '@/lib/citation'
 
 type Props = {
   report: Timeline
@@ -37,6 +38,20 @@ export function ReportActions({ report, savedId, savedAt, saving, onSave }: Prop
     }
   }
 
+  const cite = async () => {
+    const base = `${window.location.origin}${window.location.pathname}${window.location.search}`
+    const link = savedId ? `${base}#report/${savedId}` : base
+    const citation = citationFor(report, { link })
+    try {
+      await navigator.clipboard.writeText(citation)
+      toast.success('Citation copied', {
+        description: 'Coverage window, sample size, field changes and source link.',
+      })
+    } catch {
+      toast.error('Could not copy the citation', { description: citation })
+    }
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
       {savedAt ? (
@@ -64,6 +79,9 @@ export function ReportActions({ report, savedId, savedAt, saving, onSave }: Prop
       )}
 
       <div className="ml-auto flex items-center gap-1.5">
+        <Button variant="ghost" size="sm" onClick={cite}>
+          <Quote /> Cite
+        </Button>
         <Button
           variant="ghost"
           size="sm"

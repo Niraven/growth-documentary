@@ -51,8 +51,22 @@ describe('pricesIn', () => {
   })
 
   it('keeps a per-unit qualifier so downstream views can exclude it', () => {
-    const prices = pricesIn('<p>$15/mo per seat</p><p>$8.75/user/mo</p><p>$49/mo</p>')
-    expect(prices).toEqual(['$15/mo per seat', '$8.75/user/mo', '$49/mo'])
+    const prices = pricesIn(
+      '<p>$15/mo per seat</p><p>$8.75/user/mo</p><p>$15/mo, per admin</p><p>$15/mo per 2 seats</p><p>$49/mo</p>',
+    )
+    expect(prices).toEqual([
+      '$15/mo per seat',
+      '$8.75/user/mo',
+      '$15/mo, per admin',
+      '$15/mo per 2 seats',
+      '$49/mo',
+    ])
+    expect(monthlyPrices(prices)).toEqual([49])
+  })
+
+  it('reads a US$ prefix without losing the amount', () => {
+    const prices = pricesIn('<p>US$49/mo</p><p>US$15/mo per seat</p>')
+    expect(prices).toEqual(['US$49/mo', 'US$15/mo per seat'])
     expect(monthlyPrices(prices)).toEqual([49])
   })
 

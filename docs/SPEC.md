@@ -91,14 +91,14 @@ When I need to show what a competitor changed on a public page, I want a dated l
 
 | Check | Evidence |
 |---|---|
-| Extraction, diff, sampling | `tests/core.test.ts` (50 tests) |
+| Extraction, diff, sampling | `tests/core.test.ts` (51 tests) |
 | Handler routes, cache, limits, API index | `tests/api.test.ts` (15 tests) |
 | Sitemap parse and read | `tests/site.test.ts` (6 tests) |
 | Saved-report store | `tests/store.test.ts` (7 tests) |
 | Live read guards | `tests/live.test.ts` (50 tests) |
 | CSV/JSON export | `tests/export.test.ts` (5 tests) |
 | Contract guards and comparison | `tests/contract.test.ts` (14 tests) |
-| Compare, word/char diff, monthly range | `tests/compare.test.ts` (14 tests) |
+| Compare, word/char diff, monthly range | `tests/compare.test.ts` (15 tests) |
 | Citation text | `tests/citation.test.ts` (2 tests) |
 | Type-check + production build | `pnpm build` |
 | Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 field changes, 24 months |

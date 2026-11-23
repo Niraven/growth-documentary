@@ -113,7 +113,7 @@ export function pricesIn(html: string): string[] {
   const text = cleanText(textOf(body))
   const found =
     text.match(
-      /(?:US)?\$\s?\d[\d,.]*(?:\s*\/\s*(?:(?:mo|month|year|yr)|(?:seat|user|member|admin|employee|agent|workspace)\s*\/\s*(?:mo|month|year|yr)))?(?:\s+per\s+[a-z][a-z-]*)?/gi,
+      /(?:US)?\$\s?\d[\d,.]*(?:\s*\/\s*(?:(?:mo|month|year|yr)|(?:seat|user|member|admin|employee|agent|workspace)\s*\/\s*(?:mo|month|year|yr)))?(?:[\s,]+per\s+(?:\d+\s+)?[a-z][a-z-]*)?/gi,
     ) ?? []
   const cleaned = found
     .map((value) =>
@@ -124,15 +124,15 @@ export function pricesIn(html: string): string[] {
         .trim(),
     )
     .filter((value) => {
-      const amount = Number(value.replace(/[^0-9.]/g, ''))
+      const amount = priceAmount(value)
       return Number.isFinite(amount) && amount >= 1 && amount <= 100_000
     })
   return Array.from(new Set(cleaned)).slice(0, 6)
 }
 
 const priceAmount = (value: string): number => {
-  const amount = Number(value.replace(/[^0-9.]/g, ''))
-  return Number.isFinite(amount) ? amount : 0
+  const match = /^(?:US)?\$\s*([\d,]+(?:\.\d+)?)/i.exec(value.trim())
+  return match ? Number(match[1].replace(/,/g, '')) : 0
 }
 
 /** Stable display order, so an order-only shuffle is not shown as a change. */

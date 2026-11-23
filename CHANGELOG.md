@@ -68,8 +68,8 @@ Visual evidence: compare any two captures, read a monthly price range, and cite 
 
 ### Evidence
 
-- 163 unit tests (50 core, 15 handler, 6 sitemap, 7 store, 50 live, 5 export,
-  14 contract, 14 compare, 2 citation); `pnpm check` green.
+- 165 unit tests (51 core, 15 handler, 6 sitemap, 7 store, 50 live, 5 export,
+  14 contract, 15 compare, 2 citation); `pnpm check` green.
 - axe-core WCAG 2.1 A/AA: 0 violations on the report with both new panels.
 - Live report on 24 Nov 2026: 17 of 392 captures, 10 field changes; compare and
   chart reviewed at full resolution.

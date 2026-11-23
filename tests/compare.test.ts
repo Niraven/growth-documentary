@@ -112,9 +112,15 @@ describe('monthlyPrices', () => {
         '$15/mo per admin',
         '$15/mo per employee',
         '$15/mo per agent',
+        '$15/mo, per seat',
+        '$15/mo per 2 seats',
         '$49/mo',
       ]),
     ).toEqual([49])
+  })
+
+  it('accepts a US$ prefix', () => {
+    expect(monthlyPrices(['US$49/mo', 'US$15/mo per seat'])).toEqual([49])
   })
 
   it('dedupes repeated amounts', () => {

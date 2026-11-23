@@ -116,8 +116,8 @@ export type PriceDelta = {
 }
 
 const priceAmount = (price: string): number => {
-  const amount = Number(price.replace(/[^0-9.]/g, ''))
-  return Number.isFinite(amount) ? amount : Number.POSITIVE_INFINITY
+  const match = /^(?:US)?\$\s*([\d,]+(?:\.\d+)?)/i.exec(price.trim())
+  return match ? Number(match[1].replace(/,/g, '')) : Number.POSITIVE_INFINITY
 }
 
 const sorted = (prices: string[]): string[] =>
@@ -181,13 +181,13 @@ export function monthlyPrices(prices: string[]): number[] {
     // Per-seat rates are still "/mo" strings; plotting them beside plan prices
     // would compare different units. The caption says they are excluded.
     if (
-      /\bper\s+(?!(?:month|mo|year|yr|quarter|week|day|annum)\b)[a-z][a-z-]*|\/\s*(?:seat|user|member|admin|employee|agent|workspace)\b/i.test(
+      /\bper\s+(?:\d+\s+)?(?!(?:month|mo|year|yr|quarter|week|day|annum)\b)[a-z][a-z-]*|\/\s*(?:seat|user|member|admin|employee|agent|workspace)\b/i.test(
         price,
       )
     ) {
       continue
     }
-    const match = /^\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*(?:mo|month)\b/i.exec(price.trim())
+    const match = /^(?:US)?\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*(?:mo|month)\b/i.exec(price.trim())
     if (!match) continue
     const amount = Number(match[1].replace(/,/g, ''))
     if (!Number.isFinite(amount) || amount < 1 || amount > 100_000) continue

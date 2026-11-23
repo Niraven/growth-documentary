@@ -5,7 +5,6 @@ const dateLabel = (date: Date): string =>
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    timeZone: 'UTC',
   })
 
 /**

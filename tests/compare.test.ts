@@ -104,6 +104,10 @@ describe('monthlyPrices', () => {
     expect(monthlyPrices(['$99/yr', '$50', 'Custom', '$0/mo'])).toEqual([])
   })
 
+  it('excludes per-seat rates even when they carry a monthly suffix', () => {
+    expect(monthlyPrices(['$15/mo per seat', '$8.75/user/mo', '$49/mo'])).toEqual([49])
+  })
+
   it('dedupes repeated amounts', () => {
     expect(monthlyPrices(['$10/mo', '$10/mo'])).toEqual([10])
   })

@@ -178,6 +178,11 @@ export function compareCaptures(before: Capture, after: Capture): CaptureCompari
 export function monthlyPrices(prices: string[]): number[] {
   const out: number[] = []
   for (const price of prices) {
+    // Per-seat rates are still "/mo" strings; plotting them beside plan prices
+    // would compare different units. The caption says they are excluded.
+    if (/\bper\s+(?:seat|user|member|workspace)\b|\/\s*(?:seat|user|member|workspace)\b/i.test(price)) {
+      continue
+    }
     const match = /^\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*(?:mo|month)\b/i.exec(price.trim())
     if (!match) continue
     const amount = Number(match[1].replace(/,/g, ''))

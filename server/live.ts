@@ -37,6 +37,42 @@ const ENGINE = 'growth-documentary'
 const defaultLookup: Lookup = async (host) =>
   (await dnsLookup(host, { all: true, verbatim: true })) as LookupRecord[]
 
+/** Parse an IPv6 address to 16 bytes; null when the text is not valid IPv6. */
+const ipv6Bytes = (input: string): Uint8Array | null => {
+  let address = input.split('%')[0]
+  if (address.includes('.')) {
+    const colon = address.lastIndexOf(':')
+    if (colon < 0) return null
+    const parts = address
+      .slice(colon + 1)
+      .split('.')
+      .map(Number)
+    if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+      return null
+    }
+    address = `${address.slice(0, colon + 1)}${((parts[0] << 8) | parts[1]).toString(16)}:${((parts[2] << 8) | parts[3]).toString(16)}`
+  }
+
+  const halves = address.split('::')
+  if (halves.length > 2) return null
+  const head = halves[0] ? halves[0].split(':') : []
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : []
+  if (halves.length === 1 && head.length !== 8) return null
+  const missing = 8 - head.length - tail.length
+  if (missing < 0 || (halves.length === 2 && missing < 1)) return null
+  const groups = [...head, ...Array<string>(missing).fill('0'), ...tail]
+  if (groups.length !== 8) return null
+
+  const bytes = new Uint8Array(16)
+  for (let index = 0; index < 8; index += 1) {
+    if (!/^[0-9a-f]{1,4}$/i.test(groups[index])) return null
+    const value = Number.parseInt(groups[index], 16)
+    bytes[index * 2] = value >> 8
+    bytes[index * 2 + 1] = value & 0xff
+  }
+  return bytes
+}
+
 /** True only for addresses that are safe to reach on the public internet. */
 export function isPublicAddress(raw: string): boolean {
   const address = raw.trim().toLowerCase().replace(/^\[|\]$/g, '').split('%')[0]
@@ -61,18 +97,30 @@ export function isPublicAddress(raw: string): boolean {
   }
 
   if (isIP(address) === 6) {
-    if (address === '::' || address === '::1') return false
-    if (address.startsWith('::ffff:')) return isPublicAddress(address.slice(7))
-    // IPv4-compatible (deprecated), NAT64 and 6to4 can all embed a private IPv4
-    // address; reject the whole range instead of trying to unwrap it.
-    if (address.startsWith('::') && address.includes('.')) return false
-    if (address.startsWith('64:ff9b:')) return false
-    if (address.startsWith('2002:')) return false
-    if (address.startsWith('fc') || address.startsWith('fd')) return false
-    if (/^fe[89ab]/.test(address)) return false
-    if (/^fe[c-f]/.test(address)) return false
-    if (address.startsWith('ff')) return false
-    if (address.startsWith('2001:db8')) return false
+    const bytes = ipv6Bytes(address)
+    if (!bytes) return false
+
+    const allZero = bytes.every((byte) => byte === 0)
+    const loopback = bytes.slice(0, 15).every((byte) => byte === 0) && bytes[15] === 1
+    if (allZero || loopback) return false
+
+    // IPv4-compatible (deprecated, ::/96) can spell loopback as ::7f00:1.
+    if (bytes.slice(0, 12).every((byte) => byte === 0)) return false
+
+    // IPv4-mapped (::ffff:0:0/96): validate the embedded IPv4 address.
+    if (bytes.slice(0, 10).every((byte) => byte === 0) && bytes[10] === 0xff && bytes[11] === 0xff) {
+      return isPublicAddress(`${bytes[12]}.${bytes[13]}.${bytes[14]}.${bytes[15]}`)
+    }
+
+    // NAT64 and 6to4 embed IPv4 in ranges that do not prove the embedded address.
+    if (bytes[0] === 0x00 && bytes[1] === 0x64 && bytes[2] === 0xff && bytes[3] === 0x9b) return false
+    if (bytes[0] === 0x20 && bytes[1] === 0x02) return false
+
+    if ((bytes[0] & 0xfe) === 0xfc) return false // unique local fc00::/7
+    if (bytes[0] === 0xfe && (bytes[1] & 0xc0) === 0x80) return false // link-local fe80::/10
+    if (bytes[0] === 0xfe && (bytes[1] & 0xc0) === 0xc0) return false // site-local fec0::/10
+    if (bytes[0] === 0xff) return false // multicast
+    if (bytes[0] === 0x20 && bytes[1] === 0x01 && bytes[2] === 0x0d && bytes[3] === 0xb8) return false // docs
     return true
   }
 
@@ -92,6 +140,47 @@ async function resolvePublic(host: string, lookupImpl: Lookup): Promise<void> {
   if (records.some((record) => !isPublicAddress(record.address))) {
     throw new TimelineError('That domain resolves to a private address', 400)
   }
+}
+
+const MAX_ROBOTS_RULE_LENGTH = 256
+const MAX_ROBOTS_RULES = 500
+
+/**
+ * Wildcard match without a regex. A robots.txt pattern is attacker-controlled
+ * and a compiled `.*` chain backtracks catastrophically on a long path; this
+ * two-pointer matcher is bounded by pattern length × path length and cannot
+ * block the event loop on a hostile file.
+ */
+function globMatches(pattern: string, text: string): boolean {
+  if (!pattern) return false
+  const anchored = pattern.endsWith('$')
+  const glob = anchored ? pattern.slice(0, -1) : pattern
+  if (!glob.includes('*')) return anchored ? text === glob : text.startsWith(glob)
+
+  let p = 0
+  let t = 0
+  let star = -1
+  let mark = 0
+  while (t < text.length) {
+    if (p < glob.length && glob[p] === text[t]) {
+      p += 1
+      t += 1
+    } else if (p < glob.length && glob[p] === '*') {
+      star = p
+      p += 1
+      mark = t
+    } else if (star !== -1) {
+      p = star + 1
+      mark += 1
+      t = mark
+    } else if (p === glob.length) {
+      return !anchored
+    } else {
+      return false
+    }
+  }
+  while (p < glob.length && glob[p] === '*') p += 1
+  return p === glob.length
 }
 
 /**
@@ -132,24 +221,22 @@ export function robotsAllows(text: string, path: string, agent = ENGINE): boolea
   const chosen = specific.length > 0 ? specific : groups.filter((group) => group.agents.includes('*'))
   if (chosen.length === 0) return true
 
-  const matches = (pattern: string): boolean => {
-    if (!pattern) return false
-    const anchored = pattern.endsWith('$')
-    const body = (anchored ? pattern.slice(0, -1) : pattern)
-      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-      .replace(/\*/g, '.*')
-    try {
-      return new RegExp(`^${body}${anchored ? '$' : ''}`).test(path)
-    } catch {
-      return false
-    }
+  const rules = chosen.flatMap((group) => group.rules)
+  // A rule longer than this, or too many rules, is treated as a deny-all
+  // rather than as a regex workload. It is a rare shape; failing closed is the
+  // only option that cannot be turned into an event-loop stall.
+  if (
+    rules.length > MAX_ROBOTS_RULES ||
+    rules.some((rule) => rule.path.length > MAX_ROBOTS_RULE_LENGTH)
+  ) {
+    return false
   }
 
   let verdict: boolean | null = null
   let best = -1
-  for (const rule of chosen.flatMap((group) => group.rules)) {
-    if (!matches(rule.path)) continue
-    const length = rule.path.replace(/\*/g, '').length
+  for (const rule of rules) {
+    if (!globMatches(rule.path, path)) continue
+    const length = rule.path.replace(/[*$]/g, '').length
     if (length > best || (length === best && rule.allow && verdict === false)) {
       best = length
       verdict = rule.allow

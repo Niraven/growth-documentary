@@ -41,6 +41,8 @@ describe('isPublicAddress', () => {
     '::1',
     '::',
     '::127.0.0.1',
+    '::7f00:1',
+    '0:0:0:0:0:ffff:127.0.0.1',
     '64:ff9b::7f00:1',
     '2002:7f00:1::',
     'fec0::1',
@@ -102,6 +104,19 @@ describe('robotsAllows', () => {
     const text = 'User-agent: *\nDisallow: /*.json$\n'
     expect(robotsAllows(text, '/data/prices.json')).toBe(false)
     expect(robotsAllows(text, '/data/prices.json?x=1')).toBe(true)
+  })
+
+  it('does not backtrack catastrophically on a hostile wildcard pattern', () => {
+    const pattern = `/*${'*a'.repeat(40)}b`
+    const path = `/${'a'.repeat(120)}`
+    const started = performance.now()
+    robotsAllows(`User-agent: *\nDisallow: ${pattern}\n`, path)
+    expect(performance.now() - started).toBeLessThan(50)
+  })
+
+  it('fails closed rather than matching an oversized rule', () => {
+    const text = `User-agent: *\nDisallow: /${'a'.repeat(300)}\n`
+    expect(robotsAllows(text, '/pricing')).toBe(false)
   })
 })
 

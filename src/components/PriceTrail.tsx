@@ -6,8 +6,13 @@ const W = 720
 const H = 210
 const PAD = { left: 46, right: 18, top: 18, bottom: 34 }
 
-const money = (amount: number): string =>
-  amount >= 1000 ? `$${(amount / 1000).toFixed(amount % 1000 === 0 ? 0 : 1)}k` : `$${Math.round(amount)}`
+const money = (amount: number): string => {
+  const value = Math.round(amount * 100) / 100
+  return `$${value.toLocaleString('en-US', {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`
+}
 
 const monthLabel = (ts: string): string =>
   new Date(Date.UTC(Number(ts.slice(0, 4)), Number(ts.slice(4, 6)) - 1, 1)).toLocaleDateString(

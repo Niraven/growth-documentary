@@ -49,12 +49,23 @@ Visual evidence: compare any two captures, read a monthly price range, and cite 
   - IPv4-compatible, NAT64, 6to4 and site-local IPv6 ranges are rejected as
     non-public, alongside the mapped/private ranges already covered.
   - The 15-second budget now includes DNS resolution, not just HTTP.
+  - The robots matcher no longer compiles attacker-controlled patterns to
+    regexes: a bounded wildcard matcher plus rule-length and rule-count caps
+    removes the catastrophic-backtracking stall. A hostile-pattern regression
+    test asserts the match stays under 50 ms.
+  - IPv6 addresses are parsed to bytes, so IPv4-compatible forms such as
+    `::7f00:1` and uncompressed IPv4-mapped forms are rejected too, not only
+    their canonical spellings.
+- Price range excludes per-seat `/mo` strings (`$15/mo per seat`), matching the
+  caption, and preserves cents (`$8.75`, not `$9`).
+- Citations use the local calendar date, matching the saved/read timestamps in
+  the UI.
 - Saved-report copy no longer claims to freeze "the exact response": the server
   computes the frozen report, reusing the 10-minute cache when it can.
 
 ### Evidence
 
-- 154 unit tests (49 core, 15 handler, 6 sitemap, 7 store, 43 live, 5 export,
+- 159 unit tests (49 core, 15 handler, 6 sitemap, 7 store, 47 live, 5 export,
   14 contract, 13 compare, 2 citation); `pnpm check` green.
 - axe-core WCAG 2.1 A/AA: 0 violations on the report with both new panels.
 - Live report on 24 Nov 2026: 17 of 392 captures, 10 field changes; compare and

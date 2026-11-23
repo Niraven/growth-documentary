@@ -108,7 +108,7 @@ const events: DocEvent[] = [
     imageAlt: 'Stripe pricing page captured 1 June 2024, showing STANDARD plan and IC+ pricing',
     source: 'https://web.archive.org/web/20240601213401/https://stripe.com/pricing',
     sourceLabel: 'Wayback capture · 1 Jun 2024',
-    doesNotProve: 'The exact day the rename happened. The page was not observed between Jun 2022 and Jun 2024.',
+    doesNotProve: 'Whether the page changed between the captures this example reads. The archive holds more snapshots than the three cited here.',
   },
 ]
 
@@ -618,8 +618,8 @@ export default function App() {
                     Capture log
                   </h2>
                   <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
-                    Every archived page behind this report. Open any capture and check the claim
-                    yourself — nothing here is a summary of a summary.
+                    The archive index for this page. This example reads three of these captures; the
+                    rest are listed so you can see what was not examined.
                   </p>
                 </div>
                 <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">

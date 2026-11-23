@@ -109,7 +109,7 @@ Data source: [Internet Archive Wayback Machine](https://web.archive.org/) CDX + 
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 50 unit tests (vitest) |
+| `pnpm test` | 51 unit tests (vitest) |
 | `pnpm lint` | oxlint |
 | `pnpm a11y` | axe-core scan of a running build (0 violations at v0.2.0) |
 | `pnpm check` | lint + test + build |

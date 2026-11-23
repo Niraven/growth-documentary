@@ -47,6 +47,9 @@ importers:
       motion:
         specifier: ^14.14.0
         version: 14.14.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      parse5:
+        specifier: ^8.1.1
+        version: 8.1.1
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -1026,6 +1029,10 @@ packages:
     resolution: {integrity: sha512-Do6BB2xzlcc/odFg+XEYyneAx4T/WfywO71yw9ePS2tVfRsf7JVR4mUeELadIeHzixkzbG5DpluiEFPi2WGfYQ==}
     engines: {node: '>=10.13.0'}
 
+  entities@9.0.0:
+    resolution: {integrity: sha512-oJFNDJg3kTPwAD1cNn2+WmUq4wFoo09npc3Ydf1D7ED4smRiWrsKnaLxykrTWgyGEcusc87P5dxlAleol9kpkg==}
+    engines: {node: '>=20.19.0'}
+
   es-module-lexer@2.3.2:
     resolution: {integrity: sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==}
 
@@ -1221,6 +1228,9 @@ packages:
         optional: true
       vite-plus:
         optional: true
+
+  parse5@8.1.1:
+    resolution: {integrity: sha512-EcR/6WDcU7b2N3vQSxKALCk9lXGtUMQxXio008OEMBE0kavu/7JLfBEeFPzi43nMqVDSbEn3QCK+BMCc9zO//w==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -2175,6 +2185,8 @@ snapshots:
       graceful-fs: 4.2.12
       tapable: 2.3.4
 
+  entities@9.0.0: {}
+
   es-module-lexer@2.3.2: {}
 
   escalade@3.2.0: {}
@@ -2313,6 +2325,10 @@ snapshots:
       '@oxlint/binding-win32-arm64-msvc': 1.94.0
       '@oxlint/binding-win32-ia32-msvc': 1.94.0
       '@oxlint/binding-win32-x64-msvc': 1.94.0
+
+  parse5@8.1.1:
+    dependencies:
+      entities: 9.0.0
 
   picocolors@1.1.1: {}
 

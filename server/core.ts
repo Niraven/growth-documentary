@@ -3,6 +3,8 @@
  * unit-testable and safe to import from a server, a script or a test.
  */
 
+import { parse } from 'parse5'
+
 import type { Capture, Change, ChangeField, Timeline } from '../shared/timeline.js'
 
 export type { Capture, Change, ChangeField, Timeline }
@@ -83,63 +85,40 @@ export function stripHtml(html: string): string {
     .trim()
 }
 
-/**
- * Remove every balanced `<tag>…</tag>` block, nested ones included. A regex
- * cannot do this: it stops at the first closing tag and leaves the outer
- * block's tail exposed, which is how a hidden headline leaked into a report.
- */
-function stripTagBlocks(html: string, tag: string): string {
-  const openRe = new RegExp(`<${tag}\\b[^>]*>`, 'gi')
-  const closeRe = new RegExp(`<\\/${tag}\\s*>`, 'gi')
-  let out = ''
-  let cursor = 0
-
-  for (;;) {
-    openRe.lastIndex = cursor
-    const open = openRe.exec(html)
-    if (!open) {
-      out += html.slice(cursor)
-      return out
-    }
-    out += html.slice(cursor, open.index)
-
-    let depth = 1
-    let scan = openRe.lastIndex
-    let end = html.length
-    while (depth > 0) {
-      openRe.lastIndex = scan
-      const nextOpen = openRe.exec(html)
-      closeRe.lastIndex = scan
-      const nextClose = closeRe.exec(html)
-
-      if (!nextClose) {
-        end = html.length
-        break
-      }
-      if (nextOpen && nextOpen.index < nextClose.index) {
-        depth += 1
-        scan = nextOpen.index + nextOpen[0].length
-      } else {
-        depth -= 1
-        scan = nextClose.index + nextClose[0].length
-        if (depth === 0) end = scan
-      }
-    }
-    cursor = end
-  }
+type HtmlNode = {
+  nodeName: string
+  tagName?: string
+  value?: string
+  childNodes?: HtmlNode[]
 }
 
-/** Only rendered markup: comments, scripts, styles and templates are noise. */
-function renderedMarkup(html: string): string {
-  let out = html.replace(/<!--[\s\S]*?-->/g, ' ')
-  for (const tag of ['script', 'style', 'template']) out = stripTagBlocks(out, tag)
+const SKIP_TAGS = new Set(['script', 'style', 'template', 'noscript'])
+
+/** Visible text of a subtree; script, style, template and noscript are inert. */
+function textOf(node: HtmlNode | undefined): string {
+  if (!node) return ''
+  if (node.nodeName === '#text') return node.value ?? ''
+  if (node.nodeName === '#comment' || node.nodeName === '#documentType') return ''
+  if (node.tagName && SKIP_TAGS.has(node.tagName)) return ''
+  let out = ''
+  for (const child of node.childNodes ?? []) out += ` ${textOf(child)}`
   return out
 }
 
-function pick(html: string, re: RegExp): string {
-  const match = renderedMarkup(html).match(re)
-  return match ? stripHtml(match[1]).slice(0, 160) : ''
+function findTag(node: HtmlNode | undefined, tag: string): HtmlNode | undefined {
+  if (!node) return undefined
+  if (node.tagName === tag) return node
+  if (node.tagName && SKIP_TAGS.has(node.tagName)) return undefined
+  for (const child of node.childNodes ?? []) {
+    const found = findTag(child, tag)
+    if (found) return found
+  }
+  return undefined
 }
+
+const cleanText = (value: string): string => value.replace(/\s+/g, ' ').trim()
+
+const parseHtml = (html: string): HtmlNode => parse(html) as unknown as HtmlNode
 
 /**
  * Price-like strings on a page. Deliberately conservative: `$0.49` per-unit
@@ -147,7 +126,9 @@ function pick(html: string, re: RegExp): string {
  * capped so a pricing table cannot flood the diff.
  */
 export function pricesIn(html: string): string[] {
-  const text = stripHtml(renderedMarkup(html))
+  const doc = parseHtml(html)
+  const body = findTag(doc, 'body') ?? doc
+  const text = cleanText(textOf(body))
   const found = text.match(/(?:US)?\$\s?\d[\d,.]*(?:\s?\/\s?(?:mo|month|year|yr))?/gi) ?? []
   const cleaned = found
     .map((value) => value.replace(/\s+/g, ' ').trim())
@@ -159,11 +140,12 @@ export function pricesIn(html: string): string[] {
 }
 
 export function extractCapture(html: string, ts: string, archiveUrl: string): Capture {
+  const doc = parseHtml(html)
   return {
     ts,
     label: labelFor(ts),
-    title: pick(html, /<title[^>]*>([\s\S]*?)<\/title>/i),
-    h1: pick(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i),
+    title: cleanText(textOf(findTag(doc, 'title'))).slice(0, 160),
+    h1: cleanText(textOf(findTag(doc, 'h1'))).slice(0, 160),
     prices: pricesIn(html),
     url: archiveUrl,
   }

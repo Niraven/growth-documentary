@@ -120,6 +120,15 @@ describe('extractCapture', () => {
     expect(result.h1).toBe('Visible')
     expect(result.prices).toEqual(['$19/mo'])
   })
+
+  it('ignores a literal closing tag written inside an attribute value', () => {
+    const html =
+      '<template><span data-example="</template>">inner</span><h1>Hidden</h1><p>$99/mo</p></template>' +
+      '<h1>Visible</h1><p>$19/mo</p>'
+    const result = extractCapture(html, '20200101000000', 'u')
+    expect(result.h1).toBe('Visible')
+    expect(result.prices).toEqual(['$19/mo'])
+  })
 })
 
 describe('diffCaptures', () => {

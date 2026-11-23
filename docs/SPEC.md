@@ -48,7 +48,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 
 | Check | Evidence |
 |---|---|
-| Pure extraction and diff | `tests/core.test.ts` (39 tests) |
+| Pure extraction and diff | `tests/core.test.ts` (41 tests) |
 | Handler validation, cache, rate limit | `tests/api.test.ts` (9 tests) |
 | Type-check + production build | `pnpm build` |
 | Live report for a real page | example run 24 Nov 2026: `?url=basecamp.com/pricing` → 12 captures, 5 visible changes |

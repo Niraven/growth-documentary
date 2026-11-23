@@ -112,11 +112,13 @@ describe('extractCapture', () => {
     expect(result.h1).toBe('')
   })
 
-  it('does not let a nested template hide the visible headline', () => {
+  it('does not let a nested template leak a hidden headline or price', () => {
     const html =
-      '<template><h1>Hidden</h1><template></template></template><h1>Visible</h1>'
+      '<template><h1>Hidden</h1><template></template><h1>Hidden too</h1><p>$99/mo</p></template>' +
+      '<h1>Visible</h1><p>$19/mo</p>'
     const result = extractCapture(html, '20200101000000', 'u')
     expect(result.h1).toBe('Visible')
+    expect(result.prices).toEqual(['$19/mo'])
   })
 })
 
@@ -341,6 +343,36 @@ describe('buildTimeline', () => {
     await expect(
       buildTimeline('example.com/pricing', { fetchImpl: malformed, delayMs: 0 }),
     ).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('treats a CDX array of non-arrays as an upstream failure', async () => {
+    const malformed: FetchLike = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ['bad-header'],
+      text: async () => '',
+    })
+    await expect(
+      buildTimeline('example.com/pricing', { fetchImpl: malformed, delayMs: 0 }),
+    ).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('does not delay after rows that have no valid timestamp', async () => {
+    const rows = [
+      ['urlkey', 'timestamp'],
+      ['com,example)/pricing', '20200101000000'],
+      ['com,example)/pricing', 'not-a-timestamp'],
+    ]
+    const fast: FetchLike = async (url) =>
+      url.includes('/cdx/search')
+        ? { ok: true, status: 200, json: async () => rows, text: async () => '' }
+        : { ok: true, status: 200, json: async () => null, text: async () => '<title>P</title>' }
+    const timeline = await buildTimeline('example.com/pricing', {
+      fetchImpl: fast,
+      delayMs: 50,
+      timeoutMs: 20,
+    })
+    expect(timeline.captures).toHaveLength(1)
   })
 
   it('stops with 504 when the deadline passes during the inter-capture delay', async () => {

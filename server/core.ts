@@ -83,22 +83,56 @@ export function stripHtml(html: string): string {
     .trim()
 }
 
-/** Remove one tag's blocks, repeatedly, so nested templates cannot leak. */
-function removeBlocks(html: string, tag: string): string {
-  const re = new RegExp(`<${tag}\\b[\\s\\S]*?<\\/${tag}>`, 'gi')
-  let out = html
-  for (let pass = 0; pass < 5; pass += 1) {
-    const next = out.replace(re, ' ')
-    if (next === out) break
-    out = next
+/**
+ * Remove every balanced `<tag>…</tag>` block, nested ones included. A regex
+ * cannot do this: it stops at the first closing tag and leaves the outer
+ * block's tail exposed, which is how a hidden headline leaked into a report.
+ */
+function stripTagBlocks(html: string, tag: string): string {
+  const openRe = new RegExp(`<${tag}\\b[^>]*>`, 'gi')
+  const closeRe = new RegExp(`<\\/${tag}\\s*>`, 'gi')
+  let out = ''
+  let cursor = 0
+
+  for (;;) {
+    openRe.lastIndex = cursor
+    const open = openRe.exec(html)
+    if (!open) {
+      out += html.slice(cursor)
+      return out
+    }
+    out += html.slice(cursor, open.index)
+
+    let depth = 1
+    let scan = openRe.lastIndex
+    let end = html.length
+    while (depth > 0) {
+      openRe.lastIndex = scan
+      const nextOpen = openRe.exec(html)
+      closeRe.lastIndex = scan
+      const nextClose = closeRe.exec(html)
+
+      if (!nextClose) {
+        end = html.length
+        break
+      }
+      if (nextOpen && nextOpen.index < nextClose.index) {
+        depth += 1
+        scan = nextOpen.index + nextOpen[0].length
+      } else {
+        depth -= 1
+        scan = nextClose.index + nextClose[0].length
+        if (depth === 0) end = scan
+      }
+    }
+    cursor = end
   }
-  return out
 }
 
 /** Only rendered markup: comments, scripts, styles and templates are noise. */
 function renderedMarkup(html: string): string {
   let out = html.replace(/<!--[\s\S]*?-->/g, ' ')
-  for (const tag of ['script', 'style', 'template']) out = removeBlocks(out, tag)
+  for (const tag of ['script', 'style', 'template']) out = stripTagBlocks(out, tag)
   return out
 }
 
@@ -321,6 +355,9 @@ export async function buildTimeline(raw: string, options: BuildOptions = {}): Pr
     if (!Array.isArray(payload)) {
       throw new TimelineError('Unexpected response from the Internet Archive', 502)
     }
+    if (payload.length > 0 && !payload.every((row) => Array.isArray(row))) {
+      throw new TimelineError('Unexpected response from the Internet Archive', 502)
+    }
     return payload as string[][]
   }
 
@@ -330,11 +367,12 @@ export async function buildTimeline(raw: string, options: BuildOptions = {}): Pr
     const rows = await rowsFor(target.href, '6', maxCaptures * 2)
     const captures: Capture[] = []
 
-    const rowsToRead = rows.slice(1, maxCaptures + 1)
+    const rowsToRead = rows
+      .slice(1, maxCaptures + 1)
+      .filter((row) => /^\d{14}$/.test(row[1] ?? ''))
 
     for (const [index, row] of rowsToRead.entries()) {
       const ts = row[1]
-      if (!/^\d{14}$/.test(ts ?? '')) continue
       // Cite the URL the archive actually indexed when it is valid, so the
       // printed link and the fetched snapshot are the same page variant.
       const indexed =

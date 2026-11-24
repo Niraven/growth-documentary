@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ArrowUpRight, Copy, Loader2 } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { ArrowUpRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { GrowthBriefPanel } from '@/components/GrowthBrief'
+import { PriceDiff } from '@/components/PriceDiff'
 import {
   buildGrowthTimeline,
   growthMarkdown,
@@ -10,6 +12,7 @@ import {
   type GrowthEvent,
   type GrowthTimeline,
 } from '../../shared/growth'
+import { buildGrowthBrief } from '../../shared/growthBrief'
 import { chapterize, missingMonths } from '../../shared/chapters'
 import { assessCoverage } from '../../shared/coverage'
 import type { Timeline } from '../../shared/timeline'
@@ -39,6 +42,10 @@ const typeFilter: Record<GrowthEvent['type'], Filter> = {
 }
 
 function EventRow({ event }: { event: GrowthEvent }) {
+  const priceDiff =
+    event.type === 'page change' && event.title === 'Price strings changed' && event.before && event.after ? (
+      <PriceDiff before={event.before} after={event.after} />
+    ) : null
   return (
     <li className="grid gap-2 border-b border-border/70 py-4 last:border-0 sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-5">
       <div>
@@ -64,20 +71,24 @@ function EventRow({ event }: { event: GrowthEvent }) {
         </div>
         {event.before !== undefined && event.after !== undefined ? (
           <div className="mt-2 space-y-1 text-[13px] leading-relaxed">
-            <div className="flex gap-3">
-              <span className="mt-0.5 w-12 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                Before
-              </span>
-              <span className="min-w-0 break-words text-muted-foreground line-through decoration-border">
-                {event.before || '—'}
-              </span>
-            </div>
-            <div className="flex gap-3">
-              <span className="mt-0.5 w-12 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                After
-              </span>
-              <span className="min-w-0 break-words font-medium">{event.after || '—'}</span>
-            </div>
+            {priceDiff ?? (
+              <>
+                <div className="flex gap-3">
+                  <span className="mt-0.5 w-12 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    Before
+                  </span>
+                  <span className="min-w-0 break-words text-muted-foreground line-through decoration-border">
+                    {event.before || '—'}
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <span className="mt-0.5 w-12 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    After
+                  </span>
+                  <span className="min-w-0 break-words font-medium">{event.after || '—'}</span>
+                </div>
+              </>
+            )}
             <div className="flex flex-wrap gap-3 pt-1">
               {event.beforeUrl && (
                 <a
@@ -114,7 +125,15 @@ function EventRow({ event }: { event: GrowthEvent }) {
   )
 }
 
-export function GrowthTimelineReport({ report }: { report: Timeline }) {
+export function GrowthTimelineReport({
+  report,
+  actions,
+  nav,
+}: {
+  report: Timeline
+  actions?: ReactNode
+  nav?: ReactNode
+}) {
   const [growth, setGrowth] = useState<GrowthTimeline | null>(null)
   const [failed, setFailed] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
@@ -154,20 +173,7 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
     listed: current.coverage.listed,
   })
   const caveats = [...new Set([...current.caveats, ...coverage.caveats])]
-  const sourceNames = [
-    growth?.sources.page ? 'page' : null,
-    growth?.sources.site ? 'sitemap' : null,
-    growth?.sources.publicSignals ? 'HN' : null,
-    growth?.sources.feeds ? 'feed' : null,
-  ].filter(Boolean)
-  const samplePercent = coverage.counts.listed
-    ? Math.round((coverage.counts.sampled / coverage.counts.listed) * 100)
-    : 0
-  const unsampled = Math.max(0, coverage.counts.listed - coverage.counts.sampled)
-  const releasesLabel = growth?.sources.feeds
-    ? `${growth.counts.releases} releases`
-    : 'releases unread'
-  const siteEventCount = growth?.events.filter((event) => event.type === 'site expansion').length ?? 0
+  const brief = buildGrowthBrief(report, current)
   const missing = growth ? missingMonths(growth.events, growth.period.from, growth.period.to) : []
 
   const copy = async () => {
@@ -182,61 +188,21 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
   }
 
   return (
-    <section id="growth" tabIndex={-1} aria-labelledby="growth-title" className="report-section">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <span className="metadata">Open-source growth timeline</span>
-          <h2 id="growth-title">Public growth timeline</h2>
-          <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
-            Every dated signal this tool can source, in one place: offer changes, site expansion
-            and public signals. A missing lane is unread, not zero.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {growth ? (
-              <>
-                <Badge
-                  variant={
-                    coverage.level === 'multi-source'
-                      ? 'good'
-                      : coverage.level === 'thin'
-                        ? 'warn'
-                        : 'outline'
-                  }
-                >
-                  {coverage.level} public record
-                </Badge>
-                <span className="text-[11px] text-muted-foreground">
-                  {sourceNames.join(', ')} · {coverage.counts.sampled} of{' '}
-                  {coverage.counts.listed} captures ({samplePercent}%)
-                  {unsampled > 0 ? ` · ${unsampled} listed captures not sampled` : ''}
-                </span>
-              </>
-            ) : (
-              <Badge variant="outline">{failed ? 'coverage unread' : 'reading coverage'}</Badge>
-            )}
-          </div>
-          {growth && coverage.level === 'thin' && (
-            <p className="mt-3 rounded-lg border border-dashed border-border px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
-              Not enough dated public history for a confident narrative. The events below are what
-              was actually readable; the gate does not fill the gaps.
-            </p>
-          )}
-        </div>
-        <Button variant="outline" size="sm" onClick={() => void copy()} disabled={copying || !growth}>
-          {copying ? <Loader2 className="animate-spin" /> : <Copy />}
-          {copying ? 'Copying…' : 'Copy timeline'}
-        </Button>
-      </div>
+    <section id="growth" tabIndex={-1} aria-labelledby="growth-brief-title" className="report-section">
+      <GrowthBriefPanel
+        brief={brief}
+        coverage={coverage.level}
+        pending={!growth && !failed}
+        failed={failed}
+        onCopy={() => void copy()}
+        copying={copying}
+        canCopy={Boolean(growth)}
+      />
 
-      <p className="mt-4 font-mono text-[10.5px] uppercase leading-relaxed tracking-[0.12em] text-muted-foreground">
-        {growth
-          ? `${growth.events.length} dated events · ${growth.counts.pageChanges} page changes · ${siteEventCount} site-expansion month${siteEventCount === 1 ? '' : 's'} (${growth.counts.siteAdditions} pages dated) · ${growth.counts.publicSignals} HN links · ${releasesLabel}`
-          : `${current.counts.pageChanges} page changes · site and public lanes ${
-              failed ? 'unread' : 'reading'
-            }`}
-      </p>
+      {actions}
+      {nav}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-center gap-2" aria-label="Filter dated events">
         {(Object.keys(filterLabel) as Filter[]).map((value) => (
           <button
             key={value}

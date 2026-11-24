@@ -30,7 +30,7 @@ export type FetchLike = (
 }>
 
 export const ARCHIVE_ORIGIN = 'https://web.archive.org'
-export const USER_AGENT = 'growth-documentary/0.11.0 (+https://github.com/Niraven/growth-documentary)'
+export const USER_AGENT = 'growth-documentary/0.12.0 (+https://github.com/Niraven/growth-documentary)'
 
 export type CdxQuery = {
   /** Exact URL to look up, including query string. */

@@ -215,7 +215,7 @@ export function monthlyPrices(prices: string[]): number[] {
     ) {
       continue
     }
-    const match = /^(?:US)?\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*(?:mo|month)\b/i.exec(price.trim())
+    const match = /^(?:US)?\$\s*([\d,]+(?:\.\d+)?)\s*\/\s*(?:month|mo)\b/i.exec(price.trim())
     if (!match) continue
     const amount = Number(match[1].replace(/,/g, ''))
     if (!Number.isFinite(amount) || amount < 1 || amount > 100_000) continue

@@ -1,6 +1,6 @@
 {
   "name": "growth-documentary",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "An open-source growth timeline built from dated public signals.",
   "license": "MIT",
   "private": false,

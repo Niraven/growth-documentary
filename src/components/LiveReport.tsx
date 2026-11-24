@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CoverageStrip } from '@/components/CoverageStrip'
 import { ChangeMatrix } from '@/components/ChangeMatrix'
+import { PriceDiff } from '@/components/PriceDiff'
 
 const PriceTrail = lazy(() =>
   import('@/components/PriceTrail').then((module) => ({ default: module.PriceTrail })),
@@ -89,20 +90,26 @@ function ChangeRow({ change }: { change: LiveChange }) {
         </p>
       ) : (
         <div className="mt-2 space-y-1 text-[13.5px] leading-relaxed">
-          <div className="flex gap-3">
-            <span className="mt-0.5 w-12 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-              Before
-            </span>
-            <span className="text-muted-foreground line-through decoration-border">
-              {change.before || '—'}
-            </span>
-          </div>
-          <div className="flex gap-3">
-            <span className="mt-0.5 w-12 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-              After
-            </span>
-            <span className="font-medium">{change.after || '—'}</span>
-          </div>
+          {change.field === 'price' ? (
+            <PriceDiff before={change.before} after={change.after} />
+          ) : (
+            <>
+              <div className="flex gap-3">
+                <span className="mt-0.5 w-12 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  Before
+                </span>
+                <span className="text-muted-foreground line-through decoration-border">
+                  {change.before || '—'}
+                </span>
+              </div>
+              <div className="flex gap-3">
+                <span className="mt-0.5 w-12 shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  After
+                </span>
+                <span className="font-medium">{change.after || '—'}</span>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

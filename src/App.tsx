@@ -244,6 +244,22 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (!live) return
+    const ids = ['growth', 'context', 'documentary', 'compare', 'evidence', 'changes']
+    const onScroll = () => {
+      let current = ids[0]!
+      for (const id of ids) {
+        const element = document.getElementById(id)
+        if (element && element.getBoundingClientRect().top <= 140) current = id
+      }
+      setSection(current)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [live])
+
+  useEffect(() => {
     const hash = window.location.hash
     if (hash.startsWith('#report/')) {
       void openSaved(hash.slice('#report/'.length))
@@ -400,10 +416,6 @@ export default function App() {
                       {savedAt ? 'frozen from the archive' : 'live archive read'}
                     </p>
                   </div>
-                  <details className="target">
-                    <summary>Research another URL</summary>
-                    {targetForm}
-                  </details>
                 </div>
               </>
             ) : (
@@ -432,44 +444,54 @@ export default function App() {
                 <span className="font-medium">Could not build that timeline.</span> {error}
               </div>
             )}
-            {live && !loading && (
-              <div className="pt-2">
-                <ReportActions
-                  report={live}
-                  savedId={savedId}
-                  savedAt={savedAt}
-                  saving={saving}
-                  onSave={() => void save()}
-                />
-              </div>
-            )}
             {live && (
               <>
-                <nav className="report-nav" aria-label="Report sections">
-                  {[
-                    ['Timeline', 'growth'],
-                    ['Context', 'context'],
-                    ['Narrative', 'documentary'],
-                    ['Compare', 'compare'],
-                    ['Evidence', 'evidence'],
-                    ['Changes', 'changes'],
-                  ].map(([label, target]) => (
-                    <button
-                      key={label}
-                      className={section === target ? 'is-active' : undefined}
-                      aria-current={section === target ? 'location' : undefined}
-                      onClick={() => {
-                        setSection(target)
-                        const el = document.getElementById(target)
-                        el?.focus({ preventScroll: true })
-                        el?.scrollIntoView()
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </nav>
-                <GrowthTimelineReport key={`${live.domain}${live.path}`} report={live} />
+                <GrowthTimelineReport
+                  key={`${live.domain}${live.path}`}
+                  report={live}
+                  actions={
+                    <div className="mt-4">
+                      <ReportActions
+                        report={live}
+                        savedId={savedId}
+                        savedAt={savedAt}
+                        saving={saving}
+                        onSave={() => void save()}
+                      />
+                      <details className="target mt-3">
+                        <summary>Research another URL</summary>
+                        {targetForm}
+                      </details>
+                    </div>
+                  }
+                  nav={
+                    <nav className="report-nav" aria-label="Jump to a report section">
+                      <span className="report-nav-label">Jump to</span>
+                      {[
+                        ['Summary', 'growth'],
+                        ['Context', 'context'],
+                        ['Narrative', 'documentary'],
+                        ['Compare', 'compare'],
+                        ['Evidence', 'evidence'],
+                        ['Raw log', 'changes'],
+                      ].map(([label, target]) => (
+                        <button
+                          key={label}
+                          className={section === target ? 'is-active' : undefined}
+                          aria-current={section === target ? 'location' : undefined}
+                          onClick={() => {
+                            setSection(target)
+                            const el = document.getElementById(target)
+                            el?.focus({ preventScroll: true })
+                            el?.scrollIntoView()
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </nav>
+                  }
+                />
                 <SourceContextPanel domain={live.domain} path={live.path} />
                 <Documentary report={live} />
                 <OutcomesPanel />

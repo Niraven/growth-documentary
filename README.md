@@ -338,9 +338,9 @@ Source matrix, planned adapters and the inclusion rule for adding a source: [`do
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 245 unit tests (vitest) |
+| `pnpm test` | 248 unit tests (vitest) |
 | `pnpm lint` | oxlint |
-| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.11.0) |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.12.0) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting

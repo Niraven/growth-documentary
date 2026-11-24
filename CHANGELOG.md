@@ -4,6 +4,50 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] — 2026-11-24
+
+The summary-first release: the report now answers “what changed?” before it
+shows the evidence, and the workflow is easier to scan on both desktop and
+mobile.
+
+### Added
+
+- **Growth brief** — a deterministic at-a-glance reading of the same events:
+  sampled period, page-field edits, monthly price bounds, latest headline,
+  sitemap-dated pages, public signals, coverage and the unread release lane.
+  It is derived from `Timeline` + `GrowthTimeline`; there is no second source.
+- **Price chips** — page-change rows show exact archived price strings as
+  removed/added sets, with a disclosure for the exact strings. This replaces
+  the comma-separated wall of numbers.
+- **Section scrollspy** — the report nav is labelled “Jump to” and follows the
+  section in view instead of behaving like a mode switch.
+- **Summary-first mobile** — the brief appears before report actions and the
+  section rail; “Copy timeline” moved below the brief.
+
+### Fixed
+
+- `pricesIn` no longer truncates `month` to `mo` before the per-unit qualifier,
+  and no longer drops a per-user marker. Per-seat strings stay out of the
+  monthly range.
+- The summary does not quote an opening headline whose dynamic count was not
+  captured; it shows the latest sampled headline instead.
+- Coverage, page edits and observation totals are labelled consistently.
+
+### Evidence
+
+- **248 tests across 23 files**; `pnpm check` passes.
+- Live Basecamp at release check: **16 dated events**, including **8 page-field
+  edits**, 2 sitemap months covering 171 pages and 6 Hacker News links; release
+  feed unread.
+- axe **0 violations** at desktop 1280 and mobile 390.
+- Screenshots: `docs/brief-v12/`.
+
+### Limits
+
+This is a summary of the public record, not a performance statement. A missing
+lane stays unread; price bounds are a range across archived strings, not a
+plan-to-plan mapping; no revenue, traffic, conversion or causal claim is made.
+
 ## [0.11.0] — 2026-11-24
 
 The public-data build: more sources, a bounded site graph, a coverage gate, a
@@ -541,6 +585,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.12.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.12.0
 [0.11.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.11.0
 [0.10.1]: https://github.com/Niraven/growth-documentary/releases/tag/v0.10.1
 [0.10.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.10.0

@@ -42,8 +42,8 @@ try {
     }))
     assert.equal(geometry.page, width, JSON.stringify(geometry))
 
-    const heading = await page.$eval('#growth-title', (el) => el.textContent)
-    assert.equal(heading, 'Public growth timeline')
+    const heading = await page.$eval('#growth-brief-title', (el) => el.textContent)
+    assert.equal(heading, 'What changed, and what this sample can support.')
     const eventCount = await page.$$eval('[data-testid="growth-events"] li', (els) => els.length)
     assert.equal(eventCount, api.events.length)
     const links = await page.$$eval('[data-testid="growth-events"] a', (els) => els.map((el) => el.href))

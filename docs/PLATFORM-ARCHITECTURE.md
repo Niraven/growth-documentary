@@ -468,7 +468,7 @@ The architecture is not “done” until these exist:
 
 | Phase | Ships | Credential needed? | Exit test |
 |---|---|---|---|
-| P0 | this architecture + `GET /api/capabilities` metadata | no | matrix test, endpoint test |
+| P0 | this architecture + connector matrix | no | doc and matrix review |
 | P1 | press RSS lane + ad/revenue CSV import | no | fixture + import tests |
 | P2 | `team` profile: OIDC, Postgres, workspace, secrets | IdP + DB | tenant isolation + auth callback |
 | P3 | GA4 + Stripe + CRM OAuth | provider apps | fake-provider contract tests |
@@ -503,7 +503,59 @@ P4 does not ship without a licence that permits redistribution.
   unless an operator explicitly overlays them.
 - **No “complete”**. Every source cap, sample and stale timestamp is visible.
 
-## 14. Open decisions before P2
+## 14. Optional AI research layer (Grok / xAI)
+
+Do not use Grok or any LLM as the crawler. A model that is asked to “look at a
+site” is non-deterministic, difficult to audit, expensive per page, and easy to
+turn into a terms-of-service problem. The crawler is the bounded site graph;
+the feed/job/press lanes are deterministic parsers.
+
+An AI layer can still be useful **after** collection, as a writer over a closed
+evidence packet:
+
+```ts
+type AIResearchInput = {
+  target: string
+  period: { from: string; to: string }
+  coverage: { sampled: number; listed: number }
+  events: Array<{
+    id: string
+    date: string
+    type: string
+    title: string
+    detail: string
+    sourceUrl: string
+    evidence: string
+  }>
+  caveats: string[]
+}
+
+type AIResearchOutput = {
+  sentences: Array<{ text: string; eventIds: string[] }>
+  rejectedClaims: string[]
+}
+```
+
+Rules:
+
+- Use a server-side xAI key; never expose it to the browser.
+- The model receives the evidence packet, not a browsing tool and not a list of
+  URLs to fetch.
+- Every assertion must cite one or more `eventIds`; unsupported sentences are
+  rejected before rendering.
+- The model may not produce a number that is absent from the packet.
+- A failed or empty AI response degrades to the deterministic growth brief, not
+  to invented prose.
+- Pin model/version, cache by packet hash, cap tokens and log no raw provider
+  payload beyond the audit run.
+- Label the result “AI-assisted reading of the same evidence”, not “analysis”.
+- No AI-generated page fetches, login attempts, ad-library scraping or
+  first-party data access.
+
+The deterministic `buildGrowthBrief` in v0.12.0 is the no-AI default. It has no
+provider dependency and is the fallback whenever an AI layer is unavailable.
+
+## 15. Open decisions before P2
 
 1. OIDC provider: Authentik, Keycloak, or Supabase Auth.
 2. Postgres host and backup policy for `team`/`managed`.

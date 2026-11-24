@@ -113,7 +113,7 @@ export function pricesIn(html: string): string[] {
   const text = cleanText(textOf(body))
   const found =
     text.match(
-      /(?:US)?\$\s?\d[\d,.]*(?:\s*\/\s*(?:(?:mo|month|year|yr)|(?:seat|user|member|admin|employee|agent|workspace)\s*\/\s*(?:mo|month|year|yr)))?(?:[\s,]+per\s+(?:\d+\s+)?[a-z][a-z-]*)?/gi,
+      /(?:US)?\$\s?\d{1,3}(?:,\d{3})*(?:\.\d+)?(?:\s*\/\s*(?:(?:month|mo|year|yr)|(?:seat|user|member|admin|employee|agent|workspace)\s*\/\s*(?:month|mo|year|yr)))?(?:[\s,]+per\s+(?:\d+\s+)?[a-z][a-z-]*)?/gi,
     ) ?? []
   const cleaned = found
     .map((value) =>

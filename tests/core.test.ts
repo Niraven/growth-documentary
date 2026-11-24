@@ -52,11 +52,12 @@ describe('pricesIn', () => {
 
   it('keeps a per-unit qualifier so downstream views can exclude it', () => {
     const prices = pricesIn(
-      '<p>$15/mo per seat</p><p>$8.75/user/mo</p><p>$15/mo, per admin</p><p>$15/mo per 2 seats</p><p>$49/mo</p>',
+      '<p>$15/mo per seat</p><p>$8.75/user/mo</p><p>$8.75/month per user</p><p>$15/mo, per admin</p><p>$15/mo per 2 seats</p><p>$49/mo</p>',
     )
     expect(prices).toEqual([
       '$15/mo per seat',
       '$8.75/user/mo',
+      '$8.75/month per user',
       '$15/mo, per admin',
       '$15/mo per 2 seats',
       '$49/mo',

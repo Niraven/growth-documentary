@@ -1,7 +1,7 @@
 {
   "name": "growth-documentary",
-  "version": "0.8.0",
-  "description": "A dated, sourced record of what changed on a public page.",
+  "version": "0.9.0",
+  "description": "A dated, sourced public growth documentary of a changing offer.",
   "license": "MIT",
   "private": false,
   "type": "module",

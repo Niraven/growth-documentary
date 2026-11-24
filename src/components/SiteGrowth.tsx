@@ -74,7 +74,7 @@ export function SiteGrowth({ target }: { target: string }) {
       <CardHeader className="flex-row items-center justify-between space-y-0 border-b border-border/70 pb-3">
         <CardTitle className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">
           <ChartColumn className="size-3.5" />
-          Site size
+          Site footprint
         </CardTitle>
         {site?.sitemapUrl ? <Badge variant="outline">sitemap</Badge> : null}
       </CardHeader>

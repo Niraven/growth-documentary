@@ -3,15 +3,15 @@
 [![CI](https://github.com/Niraven/growth-documentary/actions/workflows/ci.yml/badge.svg)](https://github.com/Niraven/growth-documentary/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**A dated, sourced record of what changed on a public page.**
+**A dated, sourced public growth documentary of a changing offer.**
 
-Paste a public pricing page to build a marketing brief. Compare dated headlines and monthly amounts, then copy the observations and their sources into your research notes.
+Give it a company domain or a public offer page. It builds a documentary from archived captures: an opening record, dated chapters of change, a closing record, and the site footprint around them.
 
 ```
-basecamp.com/pricing → 17 of 392 listed captures → 10 field changes → a link that proves each one
+basecamp.com/pricing → 17 of 392 listed captures → 10 field changes → a public growth documentary with a link behind every scene
 ```
 
-![Growth Documentary showing a dated timeline for a pricing page](docs/brief-v08/desktop-report.png)
+![Growth Documentary showing a public growth documentary for a pricing page](docs/brief-v09/desktop-documentary.png)
 
 ## Why
 
@@ -37,29 +37,31 @@ Reports are shareable: `/?url=slack.com/pricing` re-runs the same archive query 
 
 Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
-## What a report contains
+## What a documentary contains
 
-**What moved.** The opening takeaway summarizes the sampled wording and monthly amounts, not a change to a matched plan. Each row uses its own dated sources. The brief pairs the latest comparable headline and title changes with the first and latest comparable monthly ranges and the last readable capture. If the latest capture has no monthly amounts, the brief does not carry an old price forward. **Copy brief** exports the target, checked date, coverage, observations and dated links as Markdown. [Design and verification notes](docs/DESIGN.md).
+**The story.** The default view is a three-act reading of the archive record: the opening capture, one chapter per year with dated scenes, and the closing capture. Every scene links to the exact archived page. The lede names the period, sample size and the opening/closing wording. **Copy documentary** exports the same story, coverage and linked dates as Markdown. [Design and verification notes](docs/DESIGN.md).
 
-**Coverage.** The period the report actually covers, how many captures were read, how many the index listed, and a strip that marks every capture read and every day a change was found. Gaps are visible on purpose: the space between dots is unread, not unchanged.
+**Coverage.** The period the documentary actually covers, how many captures were read, how many the index listed, and a strip that marks every capture read and every day a change was found. Gaps are visible on purpose: the space between dots is unread, not unchanged.
+
+**Receipts.** Below the story: Compare (one chosen pair for every field), the monthly price range, the change matrix, and the dated-change log. The baseline is not a change. The story and the receipts use the same archive response; the receipts never add a claim.
 
 **Changes.** Consecutive readable captures are compared field by field. The earliest capture is the baseline, not a change. The log shows the newest observations first and can be filtered by field.
 
-**Compare.** Compare starts with the earliest and latest readable captures, not the brief’s latest wording change. Choose another pair to apply those dates to every field. Prices quote all extracted strings, including non-monthly amounts. The page title uses a character-level diff (`Basecamp: Pricing` → `Basecamp — Pricing`); punctuation-only edits show both titles intact so the changed mark stays readable; the headline uses a word-level diff, and a wholesale replacement is shown as two whole states rather than an invented sentence. Price removals and additions are labelled, not encoded as negative numbers.
+**Compare.** Compare starts with the earliest and latest readable captures, not the story’s latest scene. Choose another pair to apply those dates to every field. Prices quote all extracted strings, including non-monthly amounts. The page title uses a character-level diff (`Basecamp: Pricing` → `Basecamp — Pricing`); punctuation-only edits show both titles intact so the changed mark stays readable; the headline uses a word-level diff, and a wholesale replacement is shown as two whole states rather than an invented sentence. Price removals and additions are labelled, not encoded as negative numbers.
 
-![Compare two archived captures](docs/brief-v08/desktop-compare.png)
+![Compare two archived captures](docs/brief-v09/desktop-compare.png)
 
 **Monthly price range.** On desktop, each month with monthly price strings has one bar; on phones, select a month to read the exact amounts: the lowest and highest monthly amount read that month. Annual, one-time and per-seat amounts are excluded; the caption says it is a range, not an index.
 
-![Monthly price range per capture month](docs/brief-v08/desktop-charts.png)
+![Monthly price range per capture month](docs/brief-v09/desktop-charts.png)
 
 **Citation.** One button copies a ready-to-paste citation with the coverage window, captures read, field changes, access date and source link.
 
-**Site size.** In parallel, the site's archived sitemap is read for a page count and — when the site publishes `lastmod` dates — additions per month. When those dates cluster into one month, the panel says so instead of drawing a growth curve the data cannot support.
+**Site footprint.** In parallel, the site's archived sitemap is read for a page count and — when the site publishes `lastmod` dates — additions per month. This is context for the offer story, not traffic. When those dates cluster into one month, the panel says so instead of drawing a growth curve the data cannot support.
 
 **Change matrix.** A second, smaller chart places the field observations on a calendar grid: rows are page title, headline and price string; columns are calendar months. Empty months stay visible. Numbers count observations (not just presence); the summary gives the total and month span. The baseline is never counted as a change. It is a shape of the record, not a trend line.
 
-![Change matrix of page title, headline and price observations by month](docs/brief-v08/mobile-matrix.png)
+![Change matrix of page title, headline and price observations by month](docs/brief-v09/mobile-matrix.png)
 
 **Sources.** Only Internet Archive captures supply dated changes. The other sources are context or manual lookup:
 
@@ -72,7 +74,7 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 Each automatic source shows **read**, **no rows** or **unread**; a pending check says **reading**. An unavailable provider is never drawn as zero. The lanes are checked when the report is opened; a successful read may be cached briefly. Only the Internet Archive captures inside the frozen report are saved. Design notes: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 
-![Evidence lanes with archive coverage, Hacker News stories and manual ad libraries](docs/brief-v08/desktop-evidence.png)
+![Evidence lanes with archive coverage, Hacker News stories and manual ad libraries](docs/brief-v09/desktop-evidence.png)
 
 For each capture it extracts three things:
 
@@ -317,9 +319,9 @@ Source matrix, planned adapters and the inclusion rule for adding a source: [`do
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 200 unit tests (vitest) |
+| `pnpm test` | 208 unit tests (vitest) |
 | `pnpm lint` | oxlint |
-| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.8.0) |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.9.0) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting

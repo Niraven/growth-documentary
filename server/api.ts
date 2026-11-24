@@ -39,7 +39,7 @@ type CacheEntry = { at: number; payload: string }
 type Bucket = { count: number; reset: number }
 type Scope = 'report' | 'site' | 'sources' | 'live' | 'save'
 
-const VERSION = '0.8.0'
+const VERSION = '0.9.0'
 const SAVED_ID = /^[A-Za-z0-9_-]{6,24}$/
 
 function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {

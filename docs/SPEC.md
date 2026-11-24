@@ -1,6 +1,6 @@
 # Product spec — Growth Documentary
 
-Status: implemented (v0.8.0). This file is the contract; the README explains usage.
+Status: implemented (v0.9.0). This file is the contract; the README explains usage.
 
 ## Problem
 
@@ -8,7 +8,7 @@ Competitive research produces undated screenshots or unsourced claims. Both are 
 
 ## Job to be done
 
-When I need to show what a competitor changed on a public page, I want a dated list with a link to the archived page behind each line, so I can quote it without guessing — and a way to keep and hand off the exact report I used.
+When I need to understand how a competitor's public offer changed, I want a dated documentary with the opening record, the scenes of change and a closing record — each backed by the archived page — so I can present the story without guessing or overclaiming.
 
 ## Users
 
@@ -35,6 +35,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 
 **Derived views (client-side, no new claims):**
 
+- **Documentary:** a three-act reading of the same timeline. The opening record is the first readable capture; chapters group dated field changes by year; the closing record is the latest readable capture. Each scene links to the archived before/after capture where those values were readable. The story includes the site footprint as context but does not infer traffic, revenue, conversion or cause. A page with no comparable field changes still has an opening and closing record, not an invented change.
 - **Compare:** any two readable captures from the same report. Page title uses a character-level LCS; headline uses a word-level LCS; a replacement with less than 35% shared words is shown as two whole states, not an interleaved sentence. Price deltas are labelled Removed/Added.
 - **Monthly price range:** one bar per calendar month in which monthly (`/mo`, `/month`) price strings were read. The x-axis keeps one slot per month, so empty months are visible gaps. Each bar is the min–max of those strings; annual, one-time and per-seat amounts are excluded. A triangle above the plot marks a month with a price-change row. With fewer than two such months the chart is not rendered.
 - **Change matrix:** one cell per field (`title`, `headline`, `price`) per calendar month, baseline excluded. Empty months stay visible. Shade encodes the number of observations in that field/month, not a price, a trend or a growth rate.
@@ -75,6 +76,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 - The live check is opt-in, per-request, and runs only after robots.txt allows it.
 - Saved reports are local, bounded, and written atomically; they are never recomputed on read.
 - A comparison view may only use captures already present in the report; it may not fetch or infer a missing capture.
+- A documentary may only use captures and changes already present in the report; it may not fetch another page, infer a missing capture or turn a sitemap page count into traffic.
 - A price chart may only plot monthly amounts that were actually extracted; it may not interpolate or impute a missing month.
 
 **Saved report limits**
@@ -91,8 +93,9 @@ When I need to show what a competitor changed on a public page, I want a dated l
 - HTML only, 2 MB cap, 15 s budget, no cookies, no credentials, no JavaScript, no retries.
 - The live page is read once per click; no automatic refresh.
 
-**Non-goals (v0.8)**
+**Non-goals (v0.9)**
 
+- A full company-wide crawl of every public page; the documentary is anchored to one public offer surface plus the site's archived footprint.
 - Pixel-level visual diffs of arbitrary pages. The archived page view renders
   archived HTML; it does not compare pixels or claim a visual change.
 - Monitoring, alerts, accounts, multi-user sync.
@@ -115,7 +118,8 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | CSV/JSON export | `tests/export.test.ts` (5 tests) |
 | Contract guards and comparison | `tests/contract.test.ts` (14 tests) |
 | Compare, word/char diff, monthly range | `tests/compare.test.ts` (17 tests) |
-| Marketing brief and copied Markdown | `tests/brief.test.ts` (10 tests) |
+| Marketing brief derivation | `tests/brief.test.ts` (10 tests) |
+| Public growth documentary | `tests/documentary.test.ts` (8 tests) |
 | Price axis ladder | `tests/priceAxis.test.ts` (8 tests) |
 | Change matrix | `tests/changeMatrix.test.ts` (2 tests) |
 | HN link-match lane | `tests/mentions.test.ts` (3 tests) |
@@ -125,7 +129,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | Ad links | `tests/adlinks.test.ts` (3 tests) |
 | Citation text | `tests/citation.test.ts` (2 tests) |
 | Type-check + production build | `pnpm build` |
-| Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 field changes, 24 months; brief copy verified against the timeline |
+| Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 field changes, 24 months; documentary scenes and copied Markdown verified against the timeline |
 | Design and accessibility | `docs/DESIGN.md`; axe-core WCAG 2.1 A/AA: 0 violations at desktop 1280 and mobile 390 |
 | Saved report | 24 Nov 2026: save → list → reopen `#report/<id>` → delete, all through the HTTP API |
 | Live check | 24 Nov 2026: `basecamp.com/pricing` → 200, `robots: allowed`, current title/headline/prices |

@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { MarketingBrief } from '@/components/MarketingBrief'
-import { marketingBrief } from '../shared/brief'
+import { Documentary } from '@/components/Documentary'
 import { Toaster, toast } from 'sonner'
 import { Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -259,7 +258,7 @@ export default function App() {
         htmlFor="domain"
         className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
       >
-        Public page URL
+        Company domain or public page
       </label>
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
@@ -273,11 +272,11 @@ export default function App() {
           className="h-11 w-full rounded-xl border border-border bg-card px-3.5 text-sm shadow-xs outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring/40"
         />
         <Button type="submit" disabled={loading || domain.trim().length === 0}>
-          {loading ? 'Reading archive…' : 'Build timeline'}
+          {loading ? 'Reading archive…' : 'Build documentary'}
         </Button>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        Up to 24 archive captures. Usually 20–40 seconds.
+        The page record, archived site footprint and public context. Usually 20–40 seconds.
       </p>
     </form>
   )
@@ -384,7 +383,7 @@ export default function App() {
                 <div className="report-heading">
                   <div>
                     <span className="metadata">
-                      {savedAt ? 'Saved' : 'Live'} page-history brief
+                      {savedAt ? 'Saved' : 'Live'} public growth documentary
                     </span>
                     <h1>
                       {live.domain}
@@ -392,7 +391,8 @@ export default function App() {
                       {live.path}
                     </h1>
                     <p>
-                      {marketingBrief(live).coverage} · Checked {live.checkedAt.slice(0, 10)} UTC
+                      Checked {live.checkedAt.slice(0, 10)} UTC ·{' '}
+                      {savedAt ? 'frozen from the archive' : 'live archive read'}
                     </p>
                   </div>
                   <details className="target">
@@ -404,11 +404,12 @@ export default function App() {
             ) : (
               <section className="landing">
                 <div>
-                  <span className="metadata">Pricing-page research</span>
-                  <h1>See how the offer changed.</h1>
+                  <span className="metadata">Public growth documentary</span>
+                  <h1>Document a company’s public growth.</h1>
                   <p className="intro">
-                    Compare a competitor’s pricing and headlines over time. Bring the exact wording
-                    and dated captures to your next positioning review.
+                    Build a dated, sourced record of how a public offer changed — then read it as a
+                    story: opening record, chapters of change, closing record, and the site
+                    footprint around it.
                   </p>
                   {targetForm}
                 </div>
@@ -438,11 +439,16 @@ export default function App() {
             {live && (
               <>
                 <nav className="report-nav" aria-label="Report sections">
-                  {['Brief', 'Compare', 'Evidence', 'Changes'].map((label) => (
+                  {[
+                    ['Story', 'documentary'],
+                    ['Compare', 'compare'],
+                    ['Evidence', 'evidence'],
+                    ['Changes', 'changes'],
+                  ].map(([label, target]) => (
                     <button
                       key={label}
                       onClick={() => {
-                        const el = document.getElementById(label.toLowerCase())
+                        const el = document.getElementById(target)
                         el?.focus({ preventScroll: true })
                         el?.scrollIntoView()
                       }}
@@ -451,7 +457,15 @@ export default function App() {
                     </button>
                   ))}
                 </nav>
-                <MarketingBrief report={live} />
+                <Documentary report={live} />
+                <div className="receipts-boundary">
+                  <span className="metadata">Receipts</span>
+                  <h2>The evidence behind the story</h2>
+                  <p>
+                    Compare a chosen pair, inspect the sampled captures, and read the dated changes
+                    and public-source lanes. The story above does not depend on these counts.
+                  </p>
+                </div>
                 <div id="compare" tabIndex={-1}>
                   <Suspense fallback={null}>
                     <CompareCaptures captures={live.captures} />

@@ -151,9 +151,9 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
         </div>
 
         <p className="mt-3 max-w-prose text-sm">
-          Unlike the brief, this comparison uses one pair for every field. It starts with the full
-          span: {captures[0].label} to {captures[captures.length - 1].label}. Choose either date
-          below.
+          This comparison uses one pair for every field. It starts with the oldest and newest
+          readable captures, {captures[0].label} to {captures[captures.length - 1].label}, and stays
+          separate from the documentary above. Choose either date below.
         </p>
         <p className="mt-2 max-w-prose text-sm text-muted-foreground">
           Prices here include every archived price string, not just monthly amounts. Annual,

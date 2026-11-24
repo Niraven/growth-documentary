@@ -11,17 +11,16 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
         How it works
       </p>
       <h1 className="mt-3 font-display text-[clamp(36px,6vw,56px)] leading-[0.95] tracking-[-0.04em]">
-        A receipt for every change.
+        Document the public growth story.
       </h1>
       <p className="mt-4 text-[16px] leading-relaxed text-muted-foreground">
-        Paste a pricing page. Get a dated list of what changed on it, with the archived page behind
-        every line. Built for the moment someone asks “says who?” in a pitch, a board deck or a
-        sales call.
+        Build a dated, sourced record of how a public offer changed — then read it as a story:
+        opening record, chapters of change, closing record, and the site footprint around it.
       </p>
 
       <div className="mt-8 flex flex-wrap gap-2">
         <Button onClick={onBack}>
-          Try it on a page <ArrowRight />
+          Build a documentary <ArrowRight />
         </Button>
         <Button variant="outline" asChild>
           <a href="https://web.archive.org/" target="_blank" rel="noreferrer">
@@ -37,15 +36,15 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
         {[
           {
             title: 'Agencies',
-            body: 'Show a prospect what changed at their competitor this year, then hand them the receipts.',
+            body: 'Send a prospect a sourced growth documentary of a competitor’s public offer, then hand them the receipts.',
           },
           {
             title: 'Founders',
-            body: 'Watch a rival’s pricing and positioning without checking their site every week.',
+            body: 'See how a rival’s public pitch, pricing and site footprint evolved without checking their site every week.',
           },
           {
             title: 'Sales teams',
-            body: 'A competitor raised prices? That is a call list, with a dated source you can send.',
+            body: 'A competitor changed its offer? Build a dated record you can send, not a screenshot with no date.',
           },
         ].map((item) => (
           <Card key={item.title}>
@@ -59,14 +58,14 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
         ))}
       </div>
 
-      <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">How a report is built</h2>
+      <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">How a documentary is built</h2>
       <ol className="mt-4 space-y-4">
         {[
-          'You give a page URL. Nothing is installed and no account is created.',
+          'You give a company domain or a public page URL. Nothing is installed and no account is created.',
           'It asks the Internet Archive which captures exist for that page, then samples up to 24 of them across the last two years: evenly spaced first, then extra reads around the captures where a change appeared.',
           'From each capture it reads three things: the page title, the first headline, and every price string on the page.',
           'It compares consecutive captures and lists only where one of those three changed. The first row is the baseline, not a change.',
-          'Every line links to the exact archived page, so you can check it before you quote it.',
+          'It rebuilds that record as a documentary: an opening capture, one chapter per year with dated scenes, and a closing capture. Every scene links to the exact archived page.',
           'In parallel it reads the site’s archived sitemap, for a page count and — when the site publishes lastmod dates — a per-month view of pages added.',
         ].map((step, index) => (
           <li key={step} className="flex gap-4">
@@ -93,19 +92,23 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">Reading a report</h2>
+      <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">Reading a documentary</h2>
       <div className="mt-4 space-y-3 text-[13.5px] leading-relaxed text-muted-foreground">
+        <p>
+          <span className="font-medium text-foreground">The opening and closing records</span> are
+          the first and last readable captures. They show what the page said on those dates; they are
+          not claims that the page was unchanged in between.
+        </p>
+        <p>
+          <span className="font-medium text-foreground">Chapters</span> group dated field changes by
+          year. Each scene links to the before and after capture where those values were readable.
+        </p>
         <p>
           <span className="font-medium text-foreground">Baseline</span> is the first readable capture.
           It is the starting point, not a change, so it does not count toward the change total.
         </p>
         <p>
-          <span className="font-medium text-foreground">Coverage</span> shows every capture that was
-          read, and marks the days where at least one field changed. The space between dots is
-          unread — not unchanged.
-        </p>
-        <p>
-          <span className="font-medium text-foreground">Site size</span> is the page count in the
+          <span className="font-medium text-foreground">Site footprint</span> is the page count in the
           site’s archived sitemap. lastmod dates are self-reported; when they cluster, the panel says
           so instead of drawing a growth curve that the data cannot support.
         </p>

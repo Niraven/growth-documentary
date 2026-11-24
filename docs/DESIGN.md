@@ -1,18 +1,24 @@
-# Field receipt: the marketing brief
+# Field receipt: the public growth documentary
 
 A marketer preparing a positioning review needs a dated observation before a chart. The dark receipt masthead and its linked source lines are the distinctive move. Navigation, exports and selectors stay familiar.
+
+## The story surface
+
+The report is read as a three-act public record: the opening capture, one chapter per year with dated scenes, and the closing capture. The story is derived from the same timeline as the receipts; it does not add a source or a claim. The site footprint sits beside the story as self-reported context, not traffic. Compare, charts, the matrix and the dated log are explicitly labelled as receipts below the story. **Copy documentary** exports the story, coverage and linked dates as Markdown.
 
 ## Reading contract
 
 - Show the latest comparable wording change for each field, not just the first and last strings. A headline that changes and reverts still has a history. Cite both sides.
 - Compare monthly dollars in the earliest capture with a range against the latest capture. These are bounds across strings, **not the same plan tracked over time**. Missing amounts stay missing. The price chart instead pools monthly amounts by calendar month.
-- Put arbitrary two-capture comparison immediately after the brief. The newest-first log can isolate pricing or messaging from punctuation edits. The baseline is not a change.
+- Put arbitrary two-capture comparison immediately after the story. The newest-first log can isolate pricing or messaging from punctuation edits. The baseline is not a change.
 - Give dated Wayback reads priority. Arquivo.pt's estimate and inspected count are separate. Hacker News describes submitted links, not reactions to a price change. Ad links are manual searches. Only the Wayback evidence freezes when saved.
 - New-target search and optional live/archived views are disclosures. No additional server routes, fetches, tracking, packages or external assets.
 
 ## Reading different date pairs
 
-The takeaway and copied Markdown use the same observations. The latest readable capture is context, not a fourth change. Each brief row links to its own evidence dates. Compare names its earliest/latest default and repeats the selected dates as the reader changes them. Its exact price strings are not the monthly-only range. A punctuation-only title edit keeps the words intact; the text legend uses the same marks as the diff.
+The takeaway and copied Markdown use the same observations. The latest readable capture is context, not a fourth change. Each story scene links to its own evidence dates. Compare names its earliest/latest default and repeats the selected dates as the reader changes them. Its exact price strings are not the monthly-only range. A punctuation-only title edit keeps the words intact; the text legend uses the same marks as the diff.
+
+The documentary is not a performance claim. It reads the public offer surface and the archived sitemap footprint; it never infers traffic, revenue, conversion or cause. The opening quote is verbatim archive text, marked as such. Scenes are ordered by capture date, and the story keeps the opening and closing records even when there are no comparable field changes.
 
 The sample quotes both monthly amounts from the linked 29 May 2026 capture. In the monthly chart, ink means selection, not a verified read. The matrix reports the count and span before the scroll area. Story titles are links, with host search for further reading; external search is broader than the matched set. On phones the primary and secondary actions fill a two-column grid. Disclosures keep native keyboard behavior with local chevrons.
 
@@ -35,11 +41,11 @@ Do not animate data into view. Buttons give press feedback in 160ms ease-out; re
 
 ## Reproduce the evidence
 
-Run `pnpm check`, then `pnpm preview --host 127.0.0.1 --port 5212 --strictPort`. In a second shell:
+Run `pnpm check`, then `pnpm preview --host 127.0.0.1 --port 5215 --strictPort`. In a second shell:
 
 ```sh
-node scripts/brief-qa.mjs http://127.0.0.1:5212 docs/brief-v08
-node scripts/a11y.mjs 'http://127.0.0.1:5212/?url=basecamp.com/pricing'
+node scripts/documentary-qa.mjs http://127.0.0.1:5215 docs/brief-v09
+node scripts/a11y.mjs 'http://127.0.0.1:5215/?url=basecamp.com/pricing'
 ```
 
-The browser script builds the real Basecamp report, checks DOM observations against the timeline response, and reads back the Markdown clipboard. It checks document width at 1440×1100 and 390×844, mobile target sizes and matrix scrolling. The screenshots in `brief-v08/` are viewports at named sections. Axe checks the rendered report, not its loading state. Live acceptance against Basecamp needs the archive online. Browser emulation does not establish physical-device or screen-reader conformance.
+The browser script builds the real Basecamp documentary, checks the story scenes against the timeline response, and reads back the Markdown clipboard. It checks document width at 1440×1100 and 390×844, mobile target sizes and matrix scrolling. The screenshots in `brief-v09/` are viewports at named sections. Axe checks the rendered report, not its loading state. Live acceptance against Basecamp needs the archive online. Browser emulation does not establish physical-device or screen-reader conformance.

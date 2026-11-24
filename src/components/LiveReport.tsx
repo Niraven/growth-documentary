@@ -8,7 +8,6 @@ import type {
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CoverageStrip } from '@/components/CoverageStrip'
-import { SiteGrowth } from '@/components/SiteGrowth'
 import { ChangeMatrix } from '@/components/ChangeMatrix'
 
 const PriceTrail = lazy(() =>
@@ -211,7 +210,6 @@ export function LiveReport({ data }: { data: LiveData }) {
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <SiteGrowth key={`${data.domain}${data.path}`} target={`${data.domain}${data.path}`} />
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">

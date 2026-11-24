@@ -4,6 +4,58 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] — 2026-11-24
+
+The product now reads as a public growth documentary, not a page-change dashboard.
+
+### Added
+
+- **Documentary surface.** The default report is a three-act reading of the
+  archive record: an opening capture, dated chapters of field changes, and a
+  closing capture. Each scene links to the archived before and after pages where
+  those values were readable. The lede names the period, sample size and the
+  opening/closing wording.
+- **Copy documentary.** The primary copy action exports the documentary, coverage,
+  observations and linked dates as Markdown.
+- **Site footprint beside the story.** The archived sitemap page count and dated
+  additions are presented as context for the offer record, with a plain statement
+  that they are self-reported and not traffic.
+- **Public-attention context.** Hacker News and the manual ad libraries remain
+  separate evidence lanes below the story; they are not merged into the narrative.
+- **Story tests and QA.** `tests/documentary.test.ts` covers opening/closing
+  records, year chapters, exact source links, no-change pages and export copy.
+  `scripts/documentary-qa.mjs` checks the rendered story against the real API.
+
+### Changed
+
+- The landing, header, How it works and report vocabulary now describe a
+  documentary: “Build documentary”, “Story”, “Receipts”, “Site footprint”.
+- Compare is explicitly separated from the story and starts with the oldest and
+  newest readable captures; the story uses its own dated scenes.
+- The old marketing-brief screen was replaced by the documentary. The underlying
+  `shared/brief.ts` remains the factual takeaway/scope helper; no data semantics
+  changed.
+
+### Evidence
+
+- 208 unit tests across 18 files: previous 200 plus 8 documentary tests.
+  `pnpm check`, lint, test and production build pass.
+- Real Basecamp run: 17 of 392 listed captures, 10 field changes, 24 months;
+  all 10 documentary scenes match the timeline response and the Markdown export
+  returns the opening/closing archive links.
+- axe-core WCAG 2.1 A/AA: 0 violations at desktop 1280 and mobile 390 on the live
+  documentary; no horizontal page overflow.
+- Screenshots: `docs/brief-v09/` (desktop and mobile documentary, landing,
+  compare, evidence, matrix, changes and stories).
+
+### Limits
+
+- The documentary is anchored to one public offer surface and the site’s archived
+  footprint; it is not a crawl of every company page.
+- It does not measure traffic, revenue, conversion or causality. The sitemap is
+  self-reported context, not a growth metric.
+- It samples the archive; gaps remain unread, not unchanged.
+
 ## [0.8.0] — 2026-11-24
 
 A marketing-first report surface on the same dated archive evidence.
@@ -348,6 +400,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.9.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.9.0
 [0.8.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.8.0
 [0.7.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.7.0
 [0.6.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.6.0

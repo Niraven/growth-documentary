@@ -139,7 +139,7 @@ export function isPublicAddress(raw: string): boolean {
   return false
 }
 
-async function resolvePublic(host: string, lookupImpl: Lookup): Promise<void> {
+export async function resolvePublic(host: string, lookupImpl: Lookup): Promise<LookupRecord[]> {
   let records: LookupRecord[]
   try {
     records = await lookupImpl(host)
@@ -152,6 +152,7 @@ async function resolvePublic(host: string, lookupImpl: Lookup): Promise<void> {
   if (records.some((record) => !isPublicAddress(record.address))) {
     throw new TimelineError('That domain resolves to a private address', 400)
   }
+  return records
 }
 
 const MAX_ROBOTS_RULE_LENGTH = 256

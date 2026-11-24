@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { buildTimeline, normaliseTarget, TimelineError, type BuildOptions } from './core.js'
 import { buildSiteInfo } from './site.js'
+import { buildSiteGraph, type SiteGraphOptions } from './sitegraph.js'
 import { buildSources } from './sources.js'
 import { fetchLive, type LiveOptions } from './live.js'
 import { ReportStore, defaultReportFile } from './store.js'
@@ -34,6 +35,8 @@ export type ApiOptions = BuildOptions & {
   storeFile?: string
   /** Live fetch injection and limits. */
   live?: LiveOptions
+  /** Injectable public crawler transport and limits. */
+  sitegraph?: SiteGraphOptions
   /** JSON body cap, for saved-report requests. */
   maxBodyBytes?: number
 }
@@ -91,6 +94,7 @@ export function createApi(options: ApiOptions = {}) {
     sourceCacheTtlMs = 15 * 60 * 1000,
     store = new ReportStore(options.storeFile ?? defaultReportFile()),
     live = {},
+    sitegraph = {},
     maxBodyBytes = 16_000,
     ...buildOptions
   } = options
@@ -204,6 +208,7 @@ export function createApi(options: ApiOptions = {}) {
           { method: 'GET', path: '/api/timeline?url=', purpose: 'dated archive timeline' },
           { method: 'GET', path: '/api/growth?url=', purpose: 'merged public growth timeline' },
           { method: 'GET', path: '/api/site?url=', purpose: 'archived sitemap size' },
+          { method: 'GET', path: '/api/sitegraph?url=', purpose: 'bounded public site graph' },
           { method: 'GET', path: '/api/sources?url=', purpose: 'public discussion and second archive lanes' },
           { method: 'GET', path: '/api/live?url=', purpose: 'opt-in current page read' },
           { method: 'GET', path: '/api/reports', purpose: 'saved report summaries' },
@@ -229,6 +234,7 @@ export function createApi(options: ApiOptions = {}) {
       route === '/timeline' ||
       route === '/growth' ||
       route === '/site' ||
+      route === '/sitegraph' ||
       route === '/sources' ||
       route === '/live'
     ) {
@@ -299,6 +305,29 @@ export function createApi(options: ApiOptions = {}) {
           remember(siteCache, key, JSON.stringify(site), cacheSize)
           res.setHeader('x-cache', 'miss')
           send(res, 200, site, { 'cache-control': 'public, max-age=600' })
+        } catch (error) {
+          handleError(res, error)
+        }
+        return
+      }
+
+      if (route === '/sitegraph') {
+        if (limited(client, 'live')) {
+          send(res, 429, { error: 'Too many live checks from this client. Wait a minute.' }, { 'retry-after': '60' })
+          return
+        }
+        const key = `sitegraph:${cacheKeyFor(target)}`
+        const hit = cachedJson(siteCache, key, siteCacheTtlMs)
+        if (hit) {
+          res.setHeader('x-cache', 'hit')
+          send(res, 200, JSON.parse(hit), { 'cache-control': 'public, max-age=600' })
+          return
+        }
+        try {
+          const graph = await buildSiteGraph(target, sitegraph)
+          remember(siteCache, key, JSON.stringify(graph), cacheSize)
+          res.setHeader('x-cache', 'miss')
+          send(res, 200, graph, { 'cache-control': 'public, max-age=600' })
         } catch (error) {
           handleError(res, error)
         }
@@ -460,7 +489,7 @@ export function createApi(options: ApiOptions = {}) {
     }
 
     send(res, 404, {
-      error: 'Unknown endpoint. Use /api/growth, /api/timeline, /api/site, /api/sources, /api/live or /api/reports.',
+      error: 'Unknown endpoint. Use /api/growth, /api/timeline, /api/site, /api/sitegraph, /api/sources, /api/live or /api/reports.',
     })
   }
 }

@@ -83,7 +83,24 @@ describe('api handler', () => {
     expect(state.status).toBe(200)
     const body = JSON.parse(state.body) as { name: string; endpoints: unknown[] }
     expect(body.name).toBe('growth-documentary')
-    expect(body.endpoints).toHaveLength(10)
+    expect(body.endpoints).toHaveLength(11)
+    expect(body.endpoints).toContainEqual(expect.objectContaining({ path: '/api/sitegraph?url=' }))
+  })
+
+  it('returns and caches a site graph', async () => {
+    const fetchImpl: FetchLike = async (url) => ({
+      ok: url === 'https://example.com/', status: url === 'https://example.com/' ? 200 : 404,
+      headers: { get: () => 'text/html' }, json: async () => null, text: async () => '<title>Home</title>',
+    })
+    const api = createApi({ sitegraph: { fetchImpl, lookupImpl: async () => [{ address: '8.8.8.8', family: 4 }] } })
+    const first = fakeExchange('/sitegraph?url=example.com')
+    await api(first.req, first.res)
+    expect(first.state.status).toBe(200)
+    expect(first.state.headers['x-cache']).toBe('miss')
+    expect(JSON.parse(first.state.body).pages).toHaveLength(1)
+    const second = fakeExchange('/sitegraph?url=example.com')
+    await api(second.req, second.res)
+    expect(second.state.headers['x-cache']).toBe('hit')
   })
 
   it('returns site info and caches it', async () => {

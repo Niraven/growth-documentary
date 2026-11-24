@@ -1,6 +1,6 @@
 # Product spec — Growth Documentary
 
-Status: implemented (v0.9.0). This file is the contract; the README explains usage.
+Status: implemented (v0.9.1). This file is the contract; the README explains usage.
 
 ## Problem
 

@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] — 2026-11-24
+
+A clean follow-up to the public growth documentary release.
+
+### Fixed
+
+- Removed a render-time mutation used to number documentary scenes. The scene
+  numbers are now derived from the immutable chapter list, so React renders and
+  lint stay clean.
+- Aligned the package, API and archive user-agent version for the patch release.
+
+### Evidence
+
+- 208 unit tests across 18 files; `pnpm check`, lint, test and production build
+  pass. The two pre-existing Fast Refresh warnings remain the only lint warnings.
+- Real Basecamp documentary acceptance still passes: 17 of 392 captures, 10 field
+  changes, 24 months; axe 0 at desktop 1280 and mobile 390.
+
 ## [0.9.0] — 2026-11-24
 
 The product now reads as a public growth documentary, not a page-change dashboard.
@@ -400,6 +418,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.9.1]: https://github.com/Niraven/growth-documentary/releases/tag/v0.9.1
 [0.9.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.9.0
 [0.8.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.8.0
 [0.7.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.7.0

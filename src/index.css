@@ -328,13 +328,24 @@
 }
 .report-nav {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 8px;
   border-top: 1px solid var(--border);
   margin: 24px 0 12px;
+  padding-top: 10px;
 }
 .report-nav button {
   min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   font-weight: 500;
+  color: var(--muted-foreground);
+}
+.report-nav button.is-active {
+  border-color: var(--border);
+  background: var(--card);
+  color: var(--foreground);
 }
 .report-nav button:hover,
 .sample-link:hover {
@@ -506,8 +517,8 @@ select {
     margin-top: 8px;
   }
   .report-nav {
-    justify-content: space-between;
-    gap: 4px;
+    justify-content: flex-start;
+    gap: 6px;
   }
   .theme-select,
   input,

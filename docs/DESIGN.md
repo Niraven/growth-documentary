@@ -1,10 +1,10 @@
-# Field receipt: the public growth documentary
+# Field receipt: the public growth timeline
 
-A marketer preparing a positioning review needs a dated observation before a chart. The dark receipt masthead and its linked source lines are the distinctive move. Navigation, exports and selectors stay familiar.
+A growth operator preparing a positioning review needs a dated signal before a chart. The dark receipt masthead and its linked source lines are the distinctive move. Navigation, exports and selectors stay familiar.
 
-## The story surface
+## The timeline surface
 
-The report is read as a three-act public record: the opening capture, one chapter per year with dated scenes, and the closing capture. The story is derived from the same timeline as the receipts; it does not add a source or a claim. The site footprint sits beside the story as self-reported context, not traffic. Compare, charts, the matrix and the dated log are explicitly labelled as receipts below the story. **Copy documentary** exports the story, coverage and linked dates as Markdown.
+The default report is a merged growth timeline: dated page changes, self-reported sitemap expansion and public Hacker News signals. Every event has a source link and an evidence label. The narrative is a three-act reading of the same record; it does not add a source or a claim. The site footprint sits beside the narrative as self-reported context, not traffic. Compare, charts, the matrix and the dated log are explicitly labelled as receipts below the narrative. **Copy timeline** exports the merged record, coverage and linked dates as Markdown.
 
 ## Reading contract
 

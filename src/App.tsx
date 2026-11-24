@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Documentary } from '@/components/Documentary'
+import { GrowthTimelineReport } from '@/components/GrowthTimeline'
 import { Toaster, toast } from 'sonner'
 import { Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -79,6 +80,7 @@ export default function App() {
   const [savedList, setSavedList] = useState<SavedSummary[]>([])
   const [savedLoading, setSavedLoading] = useState(false)
   const [savedError, setSavedError] = useState<string | null>(null)
+  const [section, setSection] = useState('growth')
 
   const build = async (target: string) => {
     setLoading(true)
@@ -272,7 +274,7 @@ export default function App() {
           className="h-11 w-full rounded-xl border border-border bg-card px-3.5 text-sm shadow-xs outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring/40"
         />
         <Button type="submit" disabled={loading || domain.trim().length === 0}>
-          {loading ? 'Reading archive…' : 'Build documentary'}
+          {loading ? 'Reading archive…' : 'Build growth timeline'}
         </Button>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -310,7 +312,7 @@ export default function App() {
                 className="rounded-[6px]"
               />
               <span className="font-display text-[15px] tracking-[-0.01em]">
-                Growth Documentary
+                Growth Timeline
               </span>
             </button>
 
@@ -383,7 +385,7 @@ export default function App() {
                 <div className="report-heading">
                   <div>
                     <span className="metadata">
-                      {savedAt ? 'Saved' : 'Live'} public growth documentary
+                      {savedAt ? 'Saved' : 'Live'} public growth timeline
                     </span>
                     <h1>
                       {live.domain}
@@ -404,12 +406,12 @@ export default function App() {
             ) : (
               <section className="landing">
                 <div>
-                  <span className="metadata">Public growth documentary</span>
-                  <h1>Document a company’s public growth.</h1>
+                  <span className="metadata">Open-source growth tool</span>
+                  <h1>Reconstruct a company’s public growth.</h1>
                   <p className="intro">
-                    Build a dated, sourced record of how a public offer changed — then read it as a
-                    story: opening record, chapters of change, closing record, and the site
-                    footprint around it.
+                    Build a dated, sourced growth timeline: what changed on the offer page, when the
+                    site expanded, and when the company appeared in public discussion. Then read the
+                    same record as a short narrative.
                   </p>
                   {targetForm}
                 </div>
@@ -440,14 +442,18 @@ export default function App() {
               <>
                 <nav className="report-nav" aria-label="Report sections">
                   {[
-                    ['Story', 'documentary'],
+                    ['Timeline', 'growth'],
+                    ['Narrative', 'documentary'],
                     ['Compare', 'compare'],
                     ['Evidence', 'evidence'],
                     ['Changes', 'changes'],
                   ].map(([label, target]) => (
                     <button
                       key={label}
+                      className={section === target ? 'is-active' : undefined}
+                      aria-current={section === target ? 'location' : undefined}
                       onClick={() => {
+                        setSection(target)
                         const el = document.getElementById(target)
                         el?.focus({ preventScroll: true })
                         el?.scrollIntoView()
@@ -457,6 +463,7 @@ export default function App() {
                     </button>
                   ))}
                 </nav>
+                <GrowthTimelineReport report={live} />
                 <Documentary report={live} />
                 <div className="receipts-boundary">
                   <span className="metadata">Receipts</span>
@@ -503,6 +510,15 @@ export default function App() {
               <button onClick={() => setView('system')} className="hover:text-foreground">
                 Design system
               </button>
+              <Separator orientation="vertical" className="h-3" />
+              <a
+                href="https://github.com/Niraven/growth-documentary"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-foreground"
+              >
+                Source · MIT
+              </a>
             </div>
           </div>
         </footer>

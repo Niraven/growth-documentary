@@ -107,7 +107,7 @@ export function Documentary({ report }: { report: Timeline }) {
     >
       <header className="documentary-masthead">
         <div className="documentary-kicker">
-          <span className="metadata">Public growth documentary</span>
+          <span className="metadata">Narrative reading</span>
           <span className="metadata">{story.coverage}</span>
         </div>
         <h2 id="documentary-title">{story.headline}</h2>

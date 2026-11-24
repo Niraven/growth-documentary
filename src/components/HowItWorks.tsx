@@ -11,16 +11,17 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
         How it works
       </p>
       <h1 className="mt-3 font-display text-[clamp(36px,6vw,56px)] leading-[0.95] tracking-[-0.04em]">
-        Document the public growth story.
+        Reconstruct the public growth timeline.
       </h1>
       <p className="mt-4 text-[16px] leading-relaxed text-muted-foreground">
-        Build a dated, sourced record of how a public offer changed — then read it as a story:
-        opening record, chapters of change, closing record, and the site footprint around it.
+        Build a dated, sourced timeline from public signals: what changed on the offer page, when
+        the site expanded, and when the company appeared in public discussion. Then read the same
+        record as a short narrative.
       </p>
 
       <div className="mt-8 flex flex-wrap gap-2">
         <Button onClick={onBack}>
-          Build a documentary <ArrowRight />
+          Build a growth timeline <ArrowRight />
         </Button>
         <Button variant="outline" asChild>
           <a href="https://web.archive.org/" target="_blank" rel="noreferrer">
@@ -36,7 +37,7 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
         {[
           {
             title: 'Agencies',
-            body: 'Send a prospect a sourced growth documentary of a competitor’s public offer, then hand them the receipts.',
+            body: 'Send a prospect a sourced growth timeline of a competitor’s public signals, then hand them the receipts.',
           },
           {
             title: 'Founders',
@@ -58,15 +59,15 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
         ))}
       </div>
 
-      <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">How a documentary is built</h2>
+      <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">How the timeline is built</h2>
       <ol className="mt-4 space-y-4">
         {[
           'You give a company domain or a public page URL. Nothing is installed and no account is created.',
           'It asks the Internet Archive which captures exist for that page, then samples up to 24 of them across the last two years: evenly spaced first, then extra reads around the captures where a change appeared.',
           'From each capture it reads three things: the page title, the first headline, and every price string on the page.',
           'It compares consecutive captures and lists only where one of those three changed. The first row is the baseline, not a change.',
-          'It rebuilds that record as a documentary: an opening capture, one chapter per year with dated scenes, and a closing capture. Every scene links to the exact archived page.',
-          'In parallel it reads the site’s archived sitemap, for a page count and — when the site publishes lastmod dates — a per-month view of pages added.',
+          'It merges those page observations with dated sitemap additions and public Hacker News stories into one newest-first growth timeline. Every event keeps its own source link and evidence label.',
+          'A lane that cannot be read says unread; it is never drawn as zero. The narrative below is a reading of the same events, not a second data set.',
         ].map((step, index) => (
           <li key={step} className="flex gap-4">
             <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-border bg-card font-mono text-[11px]">
@@ -92,16 +93,17 @@ export default function HowItWorks({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">Reading a documentary</h2>
+      <h2 className="mt-12 font-display text-2xl tracking-[-0.02em]">Reading the timeline</h2>
       <div className="mt-4 space-y-3 text-[13.5px] leading-relaxed text-muted-foreground">
         <p>
-          <span className="font-medium text-foreground">The opening and closing records</span> are
-          the first and last readable captures. They show what the page said on those dates; they are
-          not claims that the page was unchanged in between.
+          <span className="font-medium text-foreground">The timeline</span> is the merged list of
+          dated public signals. Every event links to its source and says whether it is a dated
+          capture, a self-reported sitemap date or a public post.
         </p>
         <p>
-          <span className="font-medium text-foreground">Chapters</span> group dated field changes by
-          year. Each scene links to the before and after capture where those values were readable.
+          <span className="font-medium text-foreground">The narrative</span> is a short reading of
+          the same record: opening capture, dated chapters of change, closing capture. It adds no
+          event and no cause.
         </p>
         <p>
           <span className="font-medium text-foreground">Baseline</span> is the first readable capture.

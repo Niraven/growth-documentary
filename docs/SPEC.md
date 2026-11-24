@@ -1,22 +1,22 @@
 # Product spec — Growth Documentary
 
-Status: implemented (v0.9.1). This file is the contract; the README explains usage.
+Status: implemented (v0.10.0). This file is the contract; the README explains usage.
 
 ## Problem
 
-Competitive research produces undated screenshots or unsourced claims. Both are unusable in a pitch, a deck or a sales call, where the first follow-up question is "says who?".
+Competitive research produces undated screenshots or unsourced claims. Both are unusable in a pitch, a deck or a sales call, where the first follow-up question is "says who?". A page diff alone is also incomplete: it cannot show site expansion or public attention.
 
 ## Job to be done
 
-When I need to understand how a competitor's public offer changed, I want a dated documentary with the opening record, the scenes of change and a closing record — each backed by the archived page — so I can present the story without guessing or overclaiming.
+When I need to understand how a competitor’s public growth changed, I want one dated timeline built from independent public sources — page changes, site expansion and public signals — with a source link and an evidence label behind every event, so I can present the sequence without guessing or overclaiming.
 
 ## Users
 
 | User | Trigger | Success |
 |---|---|---|
-| Agency owner | Pitching a prospect | Sends three dated competitor changes as proof of homework |
-| Founder | Rival changed pricing | Knows what changed and when, without weekly manual checks |
-| Sales team | Competitor raised prices | Builds a call list with a dated source |
+| Agency owner | Pitching a prospect | Sends a sourced growth timeline showing dated competitor signals |
+| Founder | Rival changed pricing or launched publicly | Sees the sequence and the receipt without weekly manual checks |
+| Sales team | Competitor raised prices or expanded its site | Builds a call list with dated sources |
 | Analyst | Repeating a teardown next quarter | Reopens the frozen report and compares it with a fresh one |
 
 ## Contract
@@ -31,11 +31,18 @@ When I need to understand how a competitor's public offer changed, I want a date
 4. `coverage`: first and last readable capture, month span, captures sampled, captures listed, sampling strategy;
 5. `checkedAt` timestamp.
 
+**Growth timeline output (`GET /api/growth?url=`):**
+
+`{ target, period, coverage, events, counts, sources, caveats, checkedAt }`.
+
+Each `GrowthEvent` has `id`, `date`, `label`, `type` (`page change`, `site expansion`, `public signal`), `title`, `detail`, `source`, `sourceUrl`, `evidence` (`dated capture`, `self-reported`, `public post`) and `note`. Page-change events also carry `before`, `after`, `beforeUrl` and `afterUrl` when readable. Events are newest-first. A missing site or public lane produces no event and an explicit caveat; it is never zero-filled. The endpoint composes the existing timeline, site and source builders; it does not add a second crawler.
+
 **Saved report output:** `{ id, savedAt, report }`. The API computes the report server-side from the URL and freezes that result; a client-supplied report object is ignored. The stored report is never recomputed on read. A save of the same `domain + path + checkedAt` is idempotent and returns the existing id.
 
 **Derived views (client-side, no new claims):**
 
-- **Documentary:** a three-act reading of the same timeline. The opening record is the first readable capture; chapters group dated field changes by year; the closing record is the latest readable capture. Each scene links to the archived before/after capture where those values were readable. The story includes the site footprint as context but does not infer traffic, revenue, conversion or cause. A page with no comparable field changes still has an opening and closing record, not an invented change.
+- **Growth timeline:** the default merged view. Page changes come from the Internet Archive; site expansion comes from the site’s own archived sitemap `lastmod` claims; public signals are Hacker News stories whose submitted URL host matches the target. Every event has a source URL and evidence label. The timeline is not a growth score, traffic estimate or causal model.
+- **Documentary:** a three-act narrative reading of the same timeline. The opening record is the first readable capture; chapters group dated field changes by year; the closing record is the latest readable capture. Each scene links to the archived before/after capture where those values were readable. It adds no event and no cause. A page with no comparable field changes still has an opening and closing record, not an invented change.
 - **Compare:** any two readable captures from the same report. Page title uses a character-level LCS; headline uses a word-level LCS; a replacement with less than 35% shared words is shown as two whole states, not an interleaved sentence. Price deltas are labelled Removed/Added.
 - **Monthly price range:** one bar per calendar month in which monthly (`/mo`, `/month`) price strings were read. The x-axis keeps one slot per month, so empty months are visible gaps. Each bar is the min–max of those strings; annual, one-time and per-seat amounts are excluded. A triangle above the plot marks a month with a price-change row. With fewer than two such months the chart is not rendered.
 - **Change matrix:** one cell per field (`title`, `headline`, `price`) per calendar month, baseline excluded. Empty months stay visible. Shade encodes the number of observations in that field/month, not a price, a trend or a growth rate.
@@ -120,6 +127,7 @@ When I need to understand how a competitor's public offer changed, I want a date
 | Compare, word/char diff, monthly range | `tests/compare.test.ts` (17 tests) |
 | Marketing brief derivation | `tests/brief.test.ts` (10 tests) |
 | Public growth documentary | `tests/documentary.test.ts` (8 tests) |
+| Growth timeline merge and boundary | `tests/growth.test.ts` (7 tests) |
 | Price axis ladder | `tests/priceAxis.test.ts` (8 tests) |
 | Change matrix | `tests/changeMatrix.test.ts` (2 tests) |
 | HN link-match lane | `tests/mentions.test.ts` (3 tests) |
@@ -129,7 +137,7 @@ When I need to understand how a competitor's public offer changed, I want a date
 | Ad links | `tests/adlinks.test.ts` (3 tests) |
 | Citation text | `tests/citation.test.ts` (2 tests) |
 | Type-check + production build | `pnpm build` |
-| Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 field changes, 24 months; documentary scenes and copied Markdown verified against the timeline |
+| Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 page changes, 24 months; `/api/growth` → 18 events from 3 source families; all rendered events linked |
 | Design and accessibility | `docs/DESIGN.md`; axe-core WCAG 2.1 A/AA: 0 violations at desktop 1280 and mobile 390 |
 | Saved report | 24 Nov 2026: save → list → reopen `#report/<id>` → delete, all through the HTTP API |
 | Live check | 24 Nov 2026: `basecamp.com/pricing` → 200, `robots: allowed`, current title/headline/prices |
@@ -138,7 +146,8 @@ When I need to understand how a competitor's public offer changed, I want a date
 ## Architecture
 
 ```
-UI (React) ── GET  /api/timeline?url=… ──┐
+UI (React) ── GET  /api/growth?url=… ────┐
+           ├─ GET  /api/timeline?url=… ──┤
            ├─ GET  /api/site?url=… ──────┤
            ├─ GET  /api/sources?url=… ───┤
            ├─ GET  /api/live?url=… ──────┤

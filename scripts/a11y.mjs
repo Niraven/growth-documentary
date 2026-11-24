@@ -16,6 +16,7 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage()
 await page.goto(url, { waitUntil: 'networkidle2', timeout: 60_000 })
 if (new URL(url).searchParams.has('url') || new URL(url).hash.startsWith('#report/')) {
+  await page.waitForSelector('#growth', { timeout: 120_000 })
   await page.waitForSelector('#documentary', { timeout: 120_000 })
   await page.waitForSelector('[data-testid="sources-board"]')
   await page.waitForFunction(() => ![...document.querySelectorAll('[data-testid="sources-board"] [data-slot="badge"]')].some(el => el.textContent === 'reading'))
@@ -34,6 +35,11 @@ const violations = results.violations.map((v) => ({
   impact: v.impact,
   nodes: v.nodes.length,
   help: v.help,
+  targets: v.nodes.slice(0, 8).map((node) => ({
+    target: node.target,
+    html: node.html.slice(0, 220),
+    failure: node.failureSummary?.split('\n').slice(0, 3).join(' '),
+  })),
 }))
 const serious = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
 

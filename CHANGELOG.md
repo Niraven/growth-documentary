@@ -4,6 +4,56 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] — 2026-11-24
+
+The product is now a **public growth timeline**, not a page-change viewer with a
+documentary skin. The original four-system brief ranked Growth Documentary as a
+multi-source reconstruction of a company’s last 12–24 months. This release
+implements the first honest version of that contract.
+
+### Added
+
+- **`GET /api/growth?url=`** — composes the page timeline, archived sitemap and
+  public-source lanes into one newest-first event list. Every event carries a
+  source URL, source family, evidence label and note.
+- **Growth timeline in the default report** — page changes, self-reported sitemap
+  expansion and public Hacker News signals, filterable by lane. It sits above the
+  narrative.
+- **Before/after capture links** — a page-change event shows both states as text
+  and links to the before and after archive captures where available.
+- **Markdown export** — `Copy timeline` exports the same event ids, source URLs
+  and limits as the API.
+- **`tests/growth.test.ts`** — merge order, baseline exclusion, source-link
+  integrity, absent-lane behaviour, unavailable HN behaviour, export parity and
+  API boundary validation.
+- **`scripts/growth-qa.mjs`** — real Basecamp acceptance and desktop/mobile
+  screenshots under `docs/brief-v10/`.
+- **`docs/GROWTH-PRODUCT-PROMPT.md`** — the rewritten product brief that the
+  implementation is checked against.
+
+### Changed
+
+- The default report and landing copy now lead with the growth timeline. The
+  documentary is labelled **Narrative** and reads from the same events.
+- The top-level primary action is no longer “Copy documentary”; the timeline owns
+  its own copy action. The footer links the MIT source.
+- Site pages are labelled **sitemap-dated pages**, not “pages added” as a growth
+  claim. Hacker News is labelled **public signals**, not launches.
+- Version strings, user agent, spec and docs moved to 0.10.0.
+
+### Evidence
+
+- **215 tests across 19 files**; `pnpm check`, lint, test and production build
+  pass. The two pre-existing Fast Refresh warnings remain.
+- Real Basecamp `/api/growth`: **18 events** from **three source families**:
+  10 page changes, 171 sitemap-dated pages, 6 Hacker News links. All 18 rendered
+  events had outbound source links; desktop 1440 and mobile 390 had no horizontal
+  overflow.
+- axe WCAG 2.1 A/AA: **0 violations** at desktop 1280 and mobile 390 on the
+  live growth timeline; no horizontal page overflow at 1440×1100 or 390×844.
+- The timeline still does not measure traffic, revenue, conversion, ROAS or cause.
+  Ad libraries remain manual.
+
 ## [0.9.1] — 2026-11-24
 
 A clean follow-up to the public growth documentary release.
@@ -418,6 +468,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.10.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.10.0
 [0.9.1]: https://github.com/Niraven/growth-documentary/releases/tag/v0.9.1
 [0.9.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.9.0
 [0.8.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.8.0

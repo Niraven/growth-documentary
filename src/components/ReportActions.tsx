@@ -1,5 +1,4 @@
 import { Bookmark, Check, Download, Link2, Loader2, Quote } from 'lucide-react'
-import { growthDocumentary } from '../../shared/documentary'
 import { toast } from 'sonner'
 import type { Timeline } from '../../shared/timeline'
 import { Badge } from '@/components/ui/badge'
@@ -54,18 +53,6 @@ export function ReportActions({ report, savedId, savedAt, saving, onSave }: Prop
 
   return (
     <div className="report-actions flex flex-wrap items-center gap-2">
-      <Button
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(growthDocumentary(report).markdown)
-            toast.success('Documentary copied')
-          } catch {
-            toast.error('Clipboard unavailable. Select and copy the documentary instead.')
-          }
-        }}
-      >
-        Copy documentary
-      </Button>
       <Button variant="outline" size="sm" onClick={copyLink}>
         <Link2 /> Copy link
       </Button>

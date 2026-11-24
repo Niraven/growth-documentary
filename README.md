@@ -3,19 +3,19 @@
 [![CI](https://github.com/Niraven/growth-documentary/actions/workflows/ci.yml/badge.svg)](https://github.com/Niraven/growth-documentary/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**A dated, sourced public growth documentary of a changing offer.**
+**An open-source growth timeline for public company signals.**
 
-Give it a company domain or a public offer page. It builds a documentary from archived captures: an opening record, dated chapters of change, a closing record, and the site footprint around them.
+Give it a company domain or a public offer page. It reconstructs a dated growth timeline from independent public sources: offer-page changes, archived sitemap expansion, and public Hacker News stories. Then it reads the same record as a short narrative.
 
 ```
-basecamp.com/pricing → 17 of 392 listed captures → 10 field changes → a public growth documentary with a link behind every scene
+basecamp.com/pricing → 10 page changes + 171 sitemap-dated pages + 6 HN links → 18 sourced signals in one timeline
 ```
 
-![Growth Documentary showing a public growth documentary for a pricing page](docs/brief-v09/desktop-documentary.png)
+![Growth Documentary showing a public growth timeline for a pricing page](docs/brief-v10/desktop-growth.png)
 
 ## Why
 
-Competitive research usually produces one of two things: a screenshot with no date, or a confident story with no source. Growth Documentary produces the boring middle: **this string was on the page on this date, that string was there later, here is the archive link.**
+Growth work starts with a sequence: what changed, when, and what happened next. Most competitive research gives you either a screenshot with no date or a confident story with no source. Growth Documentary gives you the sourced middle: **this event is dated, this is the source, this is what the source can and cannot prove.**
 
 It is useful when someone asks *"says who?"* — in a pitch, a board deck, a teardown or a sales call.
 
@@ -37,13 +37,15 @@ Reports are shareable: `/?url=slack.com/pricing` re-runs the same archive query 
 
 Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
-## What a documentary contains
+## What the growth timeline contains
 
-**The story.** The default view is a three-act reading of the archive record: the opening capture, one chapter per year with dated scenes, and the closing capture. Every scene links to the exact archived page. The lede names the period, sample size and the opening/closing wording. **Copy documentary** exports the same story, coverage and linked dates as Markdown. [Design and verification notes](docs/DESIGN.md).
+**The timeline.** The default view merges dated signals from independent public sources: page changes from the Internet Archive, site expansion from the site’s archived sitemap, and public signals from Hacker News. Every event has a source link and an evidence label. Filter by lane; a missing lane says unread, never zero. **Copy timeline** exports the merged record, coverage and links as Markdown.
 
-**Coverage.** The period the documentary actually covers, how many captures were read, how many the index listed, and a strip that marks every capture read and every day a change was found. Gaps are visible on purpose: the space between dots is unread, not unchanged.
+**The narrative.** Below the timeline, a short three-act reading of the same record: the opening capture, dated chapters of change, and the closing capture. It is one reading, not a separate data set.
 
-**Receipts.** Below the story: Compare (one chosen pair for every field), the monthly price range, the change matrix, and the dated-change log. The baseline is not a change. The story and the receipts use the same archive response; the receipts never add a claim.
+**Coverage.** The period the report actually covers, how many captures were read, how many the index listed, and a strip that marks every capture read and every day a change was found. Gaps are visible on purpose: the space between dots is unread, not unchanged.
+
+**Receipts.** Below the narrative: Compare (one chosen pair for every field), the monthly price range, the change matrix, and the dated-change log. The baseline is not a change. The timeline and the receipts use the same archive response; the receipts never add a claim.
 
 **Changes.** Consecutive readable captures are compared field by field. The earliest capture is the baseline, not a change. The log shows the newest observations first and can be filtered by field.
 
@@ -57,7 +59,7 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 **Citation.** One button copies a ready-to-paste citation with the coverage window, captures read, field changes, access date and source link.
 
-**Site footprint.** In parallel, the site's archived sitemap is read for a page count and — when the site publishes `lastmod` dates — additions per month. This is context for the offer story, not traffic. When those dates cluster into one month, the panel says so instead of drawing a growth curve the data cannot support.
+**Site footprint.** In parallel, the site's archived sitemap is read for a page count and — when the site publishes `lastmod` dates — the months in which pages were dated. In the growth timeline these become `self-reported` site-expansion events. This is context, not traffic. When those dates cluster into one month, the panel says so instead of drawing a growth curve the data cannot support.
 
 **Change matrix.** A second, smaller chart places the field observations on a calendar grid: rows are page title, headline and price string; columns are calendar months. Empty months stay visible. Numbers count observations (not just presence); the summary gives the total and month span. The baseline is never counted as a change. It is a shape of the record, not a trend line.
 
@@ -140,7 +142,7 @@ The free path is a manual check, not a fake dataset. Details and source limits:
 ## What it does not do
 
 - It does not tell you why a change happened, or whether it worked.
-- It does not measure revenue, traffic or conversion.
+- It does not measure revenue, traffic, conversion, ROAS or a growth rate.
 - It does not know the exact day of a change — only that the page looked different by the next capture.
 - It does not read pages behind a login or a paywall.
 - It does not render a pixel-perfect screenshot or a visual pixel diff. The
@@ -158,6 +160,7 @@ Those limits are deliberate. A tool that guesses is worse than a tool that says 
 
 ```http
 GET    /api
+GET    /api/growth?url=stripe.com/pricing
 GET    /api/timeline?url=stripe.com/pricing
 GET    /api/site?url=stripe.com/pricing
 GET    /api/sources?url=stripe.com/pricing
@@ -170,6 +173,8 @@ GET    /api/health
 ```
 
 `GET /api` returns the endpoint list, version and docs link, so a client can discover the surface without reading source.
+
+`GET /api/growth` is the product contract: it composes the timeline, archived sitemap and public-source lanes into one newest-first event list. Every event carries `sourceUrl`, `source`, `evidence`, `type` and `note`; `counts` and `caveats` are returned beside it. `GET /api/timeline` remains the page-only archive read.
 
 `200` returns:
 
@@ -319,9 +324,9 @@ Source matrix, planned adapters and the inclusion rule for adding a source: [`do
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 208 unit tests (vitest) |
+| `pnpm test` | 215 unit tests (vitest) |
 | `pnpm lint` | oxlint |
-| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.9.1) |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.10.0) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting

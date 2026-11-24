@@ -5,6 +5,7 @@ import { buildSources } from './sources.js'
 import { fetchLive, type LiveOptions } from './live.js'
 import { ReportStore, defaultReportFile } from './store.js'
 import type { Timeline } from '../shared/timeline.js'
+import { buildGrowthTimeline } from '../shared/growth.js'
 
 export type ApiOptions = BuildOptions & {
   /** Reports allowed per client per minute. */
@@ -13,6 +14,8 @@ export type ApiOptions = BuildOptions & {
   siteRateLimit?: number
   /** Public-source checks allowed per client per minute. */
   sourceRateLimit?: number
+  /** Combined growth-timeline builds allowed per client per minute. */
+  growthRateLimit?: number
   /** Live page checks allowed per client per minute. */
   liveRateLimit?: number
   /** Saves allowed per client per minute. */
@@ -37,9 +40,9 @@ export type ApiOptions = BuildOptions & {
 
 type CacheEntry = { at: number; payload: string }
 type Bucket = { count: number; reset: number }
-type Scope = 'report' | 'site' | 'sources' | 'live' | 'save'
+type Scope = 'report' | 'site' | 'sources' | 'growth' | 'live' | 'save'
 
-const VERSION = '0.9.1'
+const VERSION = '0.10.0'
 const SAVED_ID = /^[A-Za-z0-9_-]{6,24}$/
 
 function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
@@ -79,6 +82,7 @@ export function createApi(options: ApiOptions = {}) {
     rateLimit = 8,
     siteRateLimit = 20,
     sourceRateLimit = 6,
+    growthRateLimit = 4,
     liveRateLimit = 4,
     saveRateLimit = 6,
     cacheSize = 100,
@@ -103,7 +107,9 @@ export function createApi(options: ApiOptions = {}) {
         ? siteRateLimit
         : scope === 'sources'
           ? sourceRateLimit
-          : scope === 'live'
+          : scope === 'growth'
+            ? growthRateLimit
+            : scope === 'live'
             ? liveRateLimit
             : scope === 'save'
               ? saveRateLimit
@@ -196,6 +202,7 @@ export function createApi(options: ApiOptions = {}) {
         docs: 'https://github.com/Niraven/growth-documentary#api',
         endpoints: [
           { method: 'GET', path: '/api/timeline?url=', purpose: 'dated archive timeline' },
+          { method: 'GET', path: '/api/growth?url=', purpose: 'merged public growth timeline' },
           { method: 'GET', path: '/api/site?url=', purpose: 'archived sitemap size' },
           { method: 'GET', path: '/api/sources?url=', purpose: 'public discussion and second archive lanes' },
           { method: 'GET', path: '/api/live?url=', purpose: 'opt-in current page read' },
@@ -218,7 +225,13 @@ export function createApi(options: ApiOptions = {}) {
       return
     }
 
-    if (route === '/timeline' || route === '/site' || route === '/sources' || route === '/live') {
+    if (
+      route === '/timeline' ||
+      route === '/growth' ||
+      route === '/site' ||
+      route === '/sources' ||
+      route === '/live'
+    ) {
       if (method !== 'GET' && method !== 'HEAD') {
         send(res, 405, { error: 'GET only' }, { allow: 'GET, HEAD' })
         return
@@ -231,6 +244,40 @@ export function createApi(options: ApiOptions = {}) {
       }
 
       const client = req.socket.remoteAddress ?? 'unknown'
+
+      if (route === '/growth') {
+        if (limited(client, 'growth')) {
+          send(res, 429, { error: 'Too many growth timelines from this client. Wait a minute.' }, { 'retry-after': '60' })
+          return
+        }
+        const key = `growth:${cacheKeyFor(target)}`
+        const hit = cachedJson(sourceCache, key, sourceCacheTtlMs)
+        if (hit) {
+          res.setHeader('x-cache', 'hit')
+          send(res, 200, JSON.parse(hit), { 'cache-control': 'public, max-age=300' })
+          return
+        }
+        try {
+          const { timeline } = await resolveTimeline(target)
+          const [site, sources] = await Promise.all([
+            buildSiteInfo(target, {
+              fetchImpl: buildOptions.fetchImpl,
+              timeoutMs: buildOptions.timeoutMs,
+            }),
+            buildSources(target, {
+              fetchImpl: buildOptions.fetchImpl,
+              timeoutMs: buildOptions.timeoutMs,
+            }),
+          ])
+          const growth = buildGrowthTimeline(timeline, site, sources)
+          remember(sourceCache, key, JSON.stringify(growth), cacheSize)
+          res.setHeader('x-cache', 'miss')
+          send(res, 200, growth, { 'cache-control': 'public, max-age=300' })
+        } catch (error) {
+          handleError(res, error)
+        }
+        return
+      }
 
       if (route === '/site') {
         if (limited(client, 'site')) {
@@ -413,7 +460,7 @@ export function createApi(options: ApiOptions = {}) {
     }
 
     send(res, 404, {
-      error: 'Unknown endpoint. Use /api/timeline, /api/site, /api/sources, /api/live or /api/reports.',
+      error: 'Unknown endpoint. Use /api/growth, /api/timeline, /api/site, /api/sources, /api/live or /api/reports.',
     })
   }
 }

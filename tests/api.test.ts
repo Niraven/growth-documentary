@@ -73,7 +73,7 @@ describe('api handler', () => {
     await api(req, res)
     expect(state.status).toBe(200)
     expect(JSON.parse(state.body).ok).toBe(true)
-    expect(JSON.parse(state.body).version).toBe('0.9.1')
+    expect(JSON.parse(state.body).version).toBe('0.10.0')
   })
 
   it('describes the API at the root', async () => {
@@ -83,7 +83,7 @@ describe('api handler', () => {
     expect(state.status).toBe(200)
     const body = JSON.parse(state.body) as { name: string; endpoints: unknown[] }
     expect(body.name).toBe('growth-documentary')
-    expect(body.endpoints).toHaveLength(9)
+    expect(body.endpoints).toHaveLength(10)
   })
 
   it('returns site info and caches it', async () => {

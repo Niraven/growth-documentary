@@ -25,8 +25,8 @@ support a narrative. It is deliberately conservative:
 
 | Level | Condition | Meaning |
 |---|---|---|
-| `strong` | page history, at least 8 captures sampled, and two context lanes | usable public record, still sampled |
-| `partial` | page history with fewer lanes or a smaller sample | usable, but context is thin |
+| `multi-source` | page history, at least 8 captures sampled, 10% of listed captures, and two context lanes | usable public record, still sampled |
+| `limited` | page history with fewer lanes or a smaller sample | usable, but context is thin |
 | `thin` | no dated page history | do not present this as a growth story |
 
 The gate returns the source flags, sample/listed counts, open-role snapshot count,
@@ -49,7 +49,9 @@ proof.
 
 The next layer — authenticated GA4, Stripe, CRM and ad connectors — needs
 credentials, permissions, privacy review and a separate deployment boundary. It
-is not faked here.
+is not faked here. The no-dead-ends design for those lanes is in
+[`PLATFORM-ARCHITECTURE.md`](PLATFORM-ARCHITECTURE.md): every provider has a
+public/import path or an authorized path.
 
 ## Source additions
 

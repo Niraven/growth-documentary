@@ -195,4 +195,4 @@ A missing sitemap is not an error: `/api/site` returns 200 with `sitemapUrl: nul
 
 ## Roadmap gate
 
-Visual diffs, hosted multi-user storage and additional sources ship only after the current report is used on a real pitch or teardown and the output is judged sufficient without edits. Ad-library data requires a licensed provider and a separate spec.
+Visual diffs, hosted multi-user storage and additional sources ship only after the current report is used on a real pitch or teardown and the output is judged sufficient without edits. Ad-library data requires a licensed provider and a separate spec. The no-dead-ends connector and tenancy design is in [`PLATFORM-ARCHITECTURE.md`](PLATFORM-ARCHITECTURE.md): every provider has a public/import path or an authorized path, and no lane is a dead end.

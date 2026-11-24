@@ -162,6 +162,12 @@ The free path is a manual check, not a fake dataset. Details and source limits:
 
 Those limits are deliberate. A tool that guesses is worse than a tool that says "I only know these three things".
 
+The connector and tenancy design that removes **dead ends** without pretending
+data rights do not exist is in
+[`docs/PLATFORM-ARCHITECTURE.md`](docs/PLATFORM-ARCHITECTURE.md). Every provider
+has a public/import path or an authorized OAuth/key/licence path, and every
+state is labelled.
+
 ## API
 
 ```http

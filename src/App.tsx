@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Documentary } from '@/components/Documentary'
 import { GrowthTimelineReport } from '@/components/GrowthTimeline'
+import { OutcomesPanel } from '@/components/OutcomesPanel'
 import { Toaster, toast } from 'sonner'
 import { Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -465,6 +466,7 @@ export default function App() {
                 </nav>
                 <GrowthTimelineReport key={`${live.domain}${live.path}`} report={live} />
                 <Documentary report={live} />
+                <OutcomesPanel />
                 <div className="receipts-boundary">
                   <span className="metadata">Receipts</span>
                   <h2>The evidence behind the story</h2>

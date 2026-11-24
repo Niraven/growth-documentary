@@ -10,6 +10,8 @@ import {
   type GrowthEvent,
   type GrowthTimeline,
 } from '../../shared/growth'
+import { chapterize } from '../../shared/chapters'
+import { assessCoverage } from '../../shared/coverage'
 import type { Timeline } from '../../shared/timeline'
 
 type Filter = 'all' | 'page' | 'site' | 'launch'
@@ -139,6 +141,14 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
   const current = growth ?? buildGrowthTimeline(report)
   const visible =
     filter === 'all' ? current.events : current.events.filter((event) => typeFilter[event.type] === filter)
+  const chapters = chapterize(visible)
+  const coverage = assessCoverage({
+    pageHistory: current.sources.page,
+    siteMap: current.sources.site,
+    publicSignals: current.sources.publicSignals,
+    sampled: current.coverage.sampled,
+    listed: current.coverage.listed,
+  })
 
   const copy = async () => {
     setCopying(true)
@@ -161,6 +171,21 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
             Every dated signal this tool can source, in one place: offer changes, site expansion
             and public signals. A missing lane is unread, not zero.
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge variant={coverage.level === 'strong' ? 'good' : coverage.level === 'thin' ? 'warn' : 'outline'}>
+              {coverage.level} public record
+            </Badge>
+            <span className="text-[11px] text-muted-foreground">
+              {coverage.sourceCount} source famil{coverage.sourceCount === 1 ? 'y' : 'ies'} ·{' '}
+              {coverage.counts.sampled} of {coverage.counts.listed} captures sampled
+            </span>
+          </div>
+          {coverage.level === 'thin' && (
+            <p className="mt-3 rounded-lg border border-dashed border-border px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
+              Not enough dated public history for a confident narrative. The events below are what
+              was actually readable; the gate does not fill the gaps.
+            </p>
+          )}
         </div>
         <Button variant="outline" size="sm" onClick={() => void copy()} disabled={copying || !growth}>
           {copying ? <Loader2 className="animate-spin" /> : <Copy />}
@@ -214,11 +239,21 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
             sample. That is not proof nothing happened.
           </p>
         ) : (
-          <ol>
-            {visible.map((event) => (
-              <EventRow key={event.id} event={event} />
-            ))}
-          </ol>
+          chapters.map((chapter) => (
+            <section key={chapter.id} className="mt-4">
+              <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+                <h3 className="font-display text-[19px] tracking-[-0.02em]">{chapter.label}</h3>
+                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  {chapter.title} · {chapter.events.length}
+                </span>
+              </div>
+              <ol>
+                {chapter.events.map((event) => (
+                  <EventRow key={event.id} event={event} />
+                ))}
+              </ol>
+            </section>
+          ))
         )}
       </div>
 

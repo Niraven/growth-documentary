@@ -463,7 +463,7 @@ export default function App() {
                     </button>
                   ))}
                 </nav>
-                <GrowthTimelineReport report={live} />
+                <GrowthTimelineReport key={`${live.domain}${live.path}`} report={live} />
                 <Documentary report={live} />
                 <div className="receipts-boundary">
                   <span className="metadata">Receipts</span>

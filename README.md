@@ -326,7 +326,7 @@ Source matrix, planned adapters and the inclusion rule for adding a source: [`do
 | `pnpm start` | Serve the production build with the API |
 | `pnpm test` | 215 unit tests (vitest) |
 | `pnpm lint` | oxlint |
-| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.10.0) |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.10.1) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting

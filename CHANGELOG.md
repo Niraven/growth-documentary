@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] — 2026-11-24
+
+A clean patch for the growth timeline release.
+
+### Fixed
+
+- Removed a synchronous state reset inside the growth-timeline effect. The
+  component is keyed by target, so a new target remounts with fresh state while
+  React no longer flags a cascading render.
+- Aligned package, API and archive user-agent version for the patch.
+
+### Evidence
+
+- 215 tests across 19 files; lint, test, build, the real Basecamp growth QA and
+  axe at desktop 1280 and mobile 390 all pass.
+
 ## [0.10.0] — 2026-11-24
 
 The product is now a **public growth timeline**, not a page-change viewer with a
@@ -468,6 +484,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.10.1]: https://github.com/Niraven/growth-documentary/releases/tag/v0.10.1
 [0.10.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.10.0
 [0.9.1]: https://github.com/Niraven/growth-documentary/releases/tag/v0.9.1
 [0.9.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.9.0

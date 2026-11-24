@@ -73,7 +73,7 @@ describe('api handler', () => {
     await api(req, res)
     expect(state.status).toBe(200)
     expect(JSON.parse(state.body).ok).toBe(true)
-    expect(JSON.parse(state.body).version).toBe('0.10.0')
+    expect(JSON.parse(state.body).version).toBe('0.10.1')
   })
 
   it('describes the API at the root', async () => {

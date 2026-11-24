@@ -118,8 +118,6 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
   useEffect(() => {
     const controller = new AbortController()
     const target = `${report.domain}${report.path}`
-    setGrowth(null)
-    setFailed(false)
     const load = async () => {
       try {
         const response = await fetch(`/api/growth?url=${encodeURIComponent(target)}`, {

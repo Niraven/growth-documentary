@@ -1,3 +1,4 @@
+import { punctuationOnly } from '../shared/compare'
 import { describe, expect, it } from 'vitest'
 import {
   charDiff,
@@ -141,4 +142,9 @@ describe('monthlyPrices', () => {
   it('dedupes repeated amounts', () => {
     expect(monthlyPrices(['$10/mo', '$10/mo'])).toEqual([10])
   })
+})
+
+it('labels punctuation-only edits without hiding word, currency or case changes', () => {
+  expect(punctuationOnly('Basecamp: Pricing','Basecamp — Pricing')).toBe(true)
+  for(const [a,b] of [['A: B','A: C'],['Free!','free!'],['A: $5','A: €5'],['A: B','AB'],['Pricing','Pricing']]) expect(punctuationOnly(a,b)).toBe(false)
 })

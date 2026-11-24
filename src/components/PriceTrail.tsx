@@ -113,6 +113,19 @@ export function PriceTrail({
               ))}
             </select>
           </label>
+          <div className="plot-key max-sm:hidden" aria-label="Price chart key">
+            <span>
+              <i className="range-key" />
+              Monthly low–high
+            </span>
+            <span>
+              <b aria-hidden="true">▼</b> Price-string change
+            </span>
+            <span>
+              <i className="selected-key" />
+              Selected month
+            </span>
+          </div>
           <svg
             viewBox={`0 0 ${W} ${H}`}
             className="h-auto w-full text-foreground max-sm:hidden"
@@ -213,7 +226,7 @@ export function PriceTrail({
                     y={y(high)}
                     width={barWidth}
                     height={Math.max(1, y(low) - y(high))}
-                    fill={isSelected ? 'var(--good)' : 'currentColor'}
+                    fill="currentColor"
                     fillOpacity={isSelected ? 1 : 0.62}
                     stroke="currentColor"
                     strokeOpacity={isSelected ? 0.8 : 0.3}
@@ -307,10 +320,7 @@ export function PriceTrail({
           <figcaption className="mt-2 max-w-2xl text-[11.5px] leading-relaxed text-muted-foreground">
             Monthly amounts read in archived copy, not matched plan prices. Annual, one-time and
             per-seat rates are excluded.{' '}
-            <span className="max-sm:hidden">
-              Bars span low to high; triangles mark price-string changes. Blank months have no
-              monthly read.
-            </span>
+            <span className="max-sm:hidden">Blank months have no monthly read.</span>
           </figcaption>
 
           <div className="mt-2 space-y-1" aria-live="polite">

@@ -10,6 +10,12 @@ A marketer preparing a positioning review needs a dated observation before a cha
 - Give dated Wayback reads priority. Arquivo.pt's estimate and inspected count are separate. Hacker News describes submitted links, not reactions to a price change. Ad links are manual searches. Only the Wayback evidence freezes when saved.
 - New-target search and optional live/archived views are disclosures. No additional server routes, fetches, tracking, packages or external assets.
 
+## Reading different date pairs
+
+The takeaway and copied Markdown use the same observations. The latest readable capture is context, not a fourth change. Each brief row links to its own evidence dates. Compare names its earliest/latest default and repeats the selected dates as the reader changes them. Its exact price strings are not the monthly-only range. A punctuation-only title edit keeps the words intact; the text legend uses the same marks as the diff.
+
+The sample quotes both monthly amounts from the linked 29 May 2026 capture. In the monthly chart, ink means selection, not a verified read. The matrix reports the count and span before the scroll area. Story titles are links, with host search for further reading; external search is broader than the matched set. On phones the primary and secondary actions fill a two-column grid. Disclosures keep native keyboard behavior with local chevrons.
+
 ## Material and interaction
 
 Default zinc canvas, opaque stock, one-pixel edges, a fine inset highlight, low shadow and 10px controls. Ink for the primary action; neutral outlines for secondary actions. Green marks reads, amber an unavailable source. Red is for destructive or removed content. Display: Fraunces, fluid 48–84px on landing. Section: 28–40px. Instrument Sans for reading and controls; JetBrains Mono for dates and source labels. Spacing uses 8px steps with 4px subdivisions. Cap prose at 65ch. On phones, the example follows the form rather than shrinking alongside it.

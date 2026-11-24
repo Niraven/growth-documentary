@@ -223,3 +223,9 @@ export function monthlyPrices(prices: string[]): number[] {
   }
   return out.sort((a, b) => a - b)
 }
+
+/** Keep word boundaries, case and non-punctuation symbols significant. */
+export function punctuationOnly(before: string, after: string): boolean {
+  const tokens = (text: string) => text.replace(/[\p{P}\s]+/gu, ' ').trim()
+  return before !== after && /\p{P}/u.test(before + after) && tokens(before) === tokens(after)
+}

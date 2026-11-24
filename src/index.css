@@ -562,3 +562,107 @@ select {
     min-height: 44px;
   }
 }
+
+.brief-scope,
+.brief-context {
+  padding: 16px 32px;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+.brief-context {
+  border-top: 1px dashed var(--border);
+}
+.brief-context a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.plot-key {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin-top: 12px;
+}
+.plot-key span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.plot-key i {
+  width: 8px;
+  height: 14px;
+  background: currentColor;
+}
+.range-key {
+  opacity: 0.62;
+}
+.matrix-controls {
+  display: flex;
+  gap: 8px;
+}
+.matrix-controls button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+summary {
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+.target summary,
+.inspect summary,
+.exports summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+summary::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  margin: 0 2px 4px;
+  flex-shrink: 0;
+}
+details[open] > summary::after {
+  transform: rotate(225deg);
+  margin-bottom: -4px;
+}
+.target summary {
+  width: fit-content;
+  background: none;
+  border: 0;
+  color: var(--muted-foreground);
+  padding-inline: 0;
+  font-size: 14px;
+}
+@media (max-width: 700px) {
+  .report-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-actions > button,
+  .report-actions summary {
+    width: 100%;
+    justify-content: center;
+  }
+  .exports[open] {
+    grid-column: 1/-1;
+  }
+  .brief-scope,
+  .brief-context {
+    padding: 12px 20px;
+  }
+}
+@media (max-width: 639px) {
+  .plot-key {
+    display: none;
+  }
+}

@@ -49,6 +49,8 @@ try {
     }
     await p.goto(origin, { waitUntil: 'networkidle2' })
     await shot('landing')
+    if(name==='mobile') await shot('sample','.sample')
+    const sample = await p.$eval('.sample-quote:last-of-type', el=>({url:el.querySelector('a').href,headline:el.querySelector('p').textContent,prices:[...el.querySelectorAll('strong')].map(x=>x.textContent)}))
     const pending = p.waitForResponse((r) => r.url().includes('/api/timeline?'), {
       timeout: 120000,
     })
@@ -57,21 +59,36 @@ try {
     await p.waitForSelector('#brief')
     await p.waitForSelector('[data-testid="sources-board"]')
     await p.waitForNetworkIdle({ timeout: 60000 })
+    const sampleCapture=api.captures.find(c=>c.url===sample.url)
+    assert.ok(sampleCapture && sample.headline.includes(sampleCapture.h1) && sample.prices.length===2 && sample.prices.every(price=>sampleCapture.prices.includes(price)))
     const rows = await p.$$eval('#brief dd', (els) => els.map((e) => e.innerText))
     for (const [i, field] of ['headline', 'title'].entries()) {
       const change = api.changes.filter((c) => c.field === field).at(-1)
       assert.ok(rows[i].includes(change.before) && rows[i].includes(change.after))
     }
     const last = api.captures.at(-1)
-    const monthly = c => c.prices.filter(s => /^\$[\d.]+\/mo$/.test(s)).map(s => Number(s.slice(1,-3)))
-    const first = api.captures.find(c => monthly(c).length > 1)
-    for (const capture of [first,last]) {
+    const monthly = (c) =>
+      c.prices.filter((s) => /^\$[\d.]+\/mo$/.test(s)).map((s) => Number(s.slice(1, -3)))
+    const first = api.captures.find((c) => monthly(c).length > 1)
+    for (const capture of [first, last]) {
       const amounts = monthly(capture)
       assert.ok(rows[2].includes(`$${Math.min(...amounts)}–$${Math.max(...amounts)}/mo`))
     }
-    const heading = await p.$eval('.report-heading', e => e.innerText)
-    assert.ok(heading.includes(`${api.coverage.sampled} of ${api.coverage.available} listed captures read · ${api.coverage.months} months`))
-    assert.ok(rows[3].includes(last.label))
+    const heading = await p.$eval('.report-heading', (e) => e.innerText)
+    assert.ok(
+      heading.includes(
+        `${api.coverage.sampled} of ${api.coverage.available} listed captures read · ${api.coverage.months} months`,
+      ),
+    )
+    assert.equal(rows.length, 3)
+    assert.ok((await p.$eval('.brief-context', (e) => e.innerText)).includes(last.label))
+    const take = await p.$eval('#brief header p', (e) => e.innerText)
+    assert.ok(take.includes(api.changes.filter((c) => c.field === 'headline').at(-1).after))
+    assert.ok(
+      (await p.$eval('#compare', (e) => e.innerText)).includes(
+        `Comparing ${api.captures[0].label} with ${last.label}`,
+      ),
+    )
     const links = await p.$$eval('#brief a', (els) => els.map((e) => e.href))
     assert.ok(links.every((href) => api.captures.some((c) => c.url === href)))
     await p.bringToFront()
@@ -90,6 +107,11 @@ try {
     await shot('evidence', '[data-testid="sources-board"]')
     await shot('changes', '#changes')
     await shot('compare', '#compare')
+    await shot('stories','.story-link')
+    assert.ok(await p.$eval('.story-link',e=>e.href.startsWith('https://news.ycombinator.com/item?id=') && e.getBoundingClientRect().height>=44))
+    assert.equal(await p.$eval('a[href^="https://hn.algolia.com/?"]',e=>new URL(e.href).searchParams.get('query')),api.domain)
+    await p.select('#compare select', '1')
+    assert.ok((await p.$eval('#compare',e=>e.innerText)).includes(`Comparing ${api.captures[1].label} with ${last.label}`))
     if (name === 'mobile') {
       const narrow = await p.evaluate(() =>
         Array.from(document.querySelectorAll('a,button,select,summary,input'))
@@ -106,9 +128,7 @@ try {
           .map((e) => [e.textContent.trim().slice(0, 35), e.getBoundingClientRect().height]),
       )
       assert.deepEqual(narrow, [])
-      await p.$eval('.matrix-scroll', (e) => {
-        e.scrollLeft = e.scrollWidth
-      })
+      await p.click('.matrix-controls button:last-child')
       assert.ok(await p.$eval('.matrix-scroll', (e) => e.scrollLeft > 0))
     }
     console.log(name, api.coverage, rows, 'copy verified')

@@ -49,23 +49,33 @@ export function marketingBrief(report: Timeline) {
     : amounts.length > 1
       ? `${price} · No earlier comparable range.`
       : price
-  rows.push(
-    {
-      field: 'Monthly prices',
-      text: rangeText,
-      sources: compareRange ? [firstRange, latest] : latest ? [latest] : [],
-    },
-    {
-      field: 'Latest capture',
-      text: latest?.label ?? 'No readable captures.',
-      sources: latest ? [latest] : [],
-    },
-  )
+  rows.push({
+    field: 'Monthly prices',
+    text: rangeText,
+    sources: compareRange ? [firstRange, latest] : latest ? [latest] : [],
+  })
+  const headline = [...report.changes].reverse().find((c) => c.field === 'headline')
+  const takeaway = [
+    headline
+      ? `The headline changed to “${headline.after}” in the ${headline.label} capture.`
+      : 'No comparable headline change was observed.',
+    compareRange
+      ? `Monthly amounts in the sampled captures ranged from $${endpoints[0]}–$${endpoints[endpoints.length - 1]}/mo in the earlier read and ${price} in the latest. These are not matched plans.`
+      : `Monthly amounts in the latest sampled capture: ${rangeText}`,
+  ].join(' ')
+  const scope =
+    'Each row cites its own dates. Wording rows show the latest change in that field; prices compare monthly-only amounts across the first comparable range and the latest capture. Compare uses one pair for every field.'
   const coverage = `${report.coverage.sampled} of ${report.coverage.available} listed captures read · ${report.coverage.months} months`
   const markdown = [
     `# ${report.domain}${report.path}`,
     `Checked: ${report.checkedAt}`,
     `Coverage: ${coverage}`,
+    '',
+    takeaway,
+    scope,
+    latest
+      ? `Latest readable capture: [${latest.label}](<${latest.url}>)`
+      : 'No readable captures.',
     '',
     ...rows.map(
       (r) =>
@@ -74,5 +84,5 @@ export function marketingBrief(report: Timeline) {
     '',
     'Archive observations only. Gaps are unread.',
   ].join('\n')
-  return { rows, coverage, markdown }
+  return { rows, coverage, markdown, latest, scope, takeaway }
 }

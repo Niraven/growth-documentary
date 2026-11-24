@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { GitCompareArrows } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import type { Capture } from '../../shared/timeline'
-import { compareCaptures, charDiff, wordDiff, type DiffPart } from '../../shared/compare'
+import {
+  compareCaptures,
+  punctuationOnly,
+  charDiff,
+  wordDiff,
+  type DiffPart,
+} from '../../shared/compare'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -59,6 +65,7 @@ function FieldDiff({
   captureAfter: Capture
   mode?: 'word' | 'char'
 }) {
+  const punctuation = mode === 'char' && punctuationOnly(before, after)
   const raw = mode === 'char' ? charDiff(before, after) : wordDiff(before, after)
   let beforeParts = raw.filter((part) => part.kind !== 'added')
   let afterParts = raw.filter((part) => part.kind !== 'removed')
@@ -80,6 +87,7 @@ function FieldDiff({
     <div>
       <p className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground">
         {label}
+        {punctuation && ' · Punctuation only; the words are unchanged.'}
       </p>
       <p className="sr-only">
         Before: {before || 'empty'} — after: {after || 'empty'}
@@ -88,13 +96,13 @@ function FieldDiff({
         <DiffSide
           label="Before"
           capture={captureBefore}
-          parts={beforeParts}
+          parts={punctuation ? [{kind:'same',text:before}] : beforeParts}
           spaced={mode === 'word'}
         />
         <DiffSide
           label="After"
           capture={captureAfter}
-          parts={afterParts}
+          parts={punctuation ? [{kind:'same',text:after}] : afterParts}
           spaced={mode === 'word'}
         />
       </div>
@@ -110,7 +118,8 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
   const [toIndex, setToIndex] = useState(Math.max(0, captures.length - 1))
   const reduce = useReducedMotion()
 
-  if (captures.length < 2) return <p>Comparing dates takes two readable captures. This report has fewer than two.</p>
+  if (captures.length < 2)
+    return <p>Comparing dates takes two readable captures. This report has fewer than two.</p>
 
   const before = captures[fromIndex] ?? captures[0]
   const after = captures[toIndex] ?? captures[captures.length - 1]
@@ -141,6 +150,15 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
           </Badge>
         </div>
 
+        <p className="mt-3 max-w-prose text-sm">
+          Unlike the brief, this comparison uses one pair for every field. It starts with the full
+          span: {captures[0].label} to {captures[captures.length - 1].label}. Choose either date
+          below.
+        </p>
+        <p className="mt-2 max-w-prose text-sm text-muted-foreground">
+          Prices here include every archived price string, not just monthly amounts. Annual,
+          per-seat or one-time prices can appear here but not in the brief’s range.
+        </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -177,6 +195,9 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
         </div>
 
         <div aria-live="polite" className="mt-4 border-t border-border/70 pt-4">
+          <p className="mb-3 text-sm font-medium">
+            Comparing {before.label} with {after.label}.
+          </p>
           <motion.div
             key={`${before.ts}-${after.ts}`}
             initial={reduce ? false : { opacity: 0, y: 5 }}
@@ -185,16 +206,16 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
           >
             {!comparison.changed ? (
               <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-                These two captures match in the fields this tool reads. That is not proof nothing
-                changed between them — only proof that these three fields did not.
+                No comparable differences were observed. Missing values are gaps, and changes
+                between these dates may not have been captured.
               </p>
             ) : (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2 text-[10.5px] text-muted-foreground">
-                  <del className="rounded-[2px] bg-destructive/5 px-1 decoration-destructive/50">
+                  <del className="rounded-[2px] bg-destructive/10 px-1 text-foreground/80 decoration-destructive decoration-2">
                     removed text
                   </del>
-                  <ins className="rounded-[2px] bg-foreground/10 px-1 no-underline">
+                  <ins className="rounded-[2px] bg-foreground/10 px-1 font-medium text-foreground no-underline">
                     added text
                   </ins>
                 </div>
@@ -230,7 +251,7 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
                             className="inline-flex items-baseline gap-1.5 rounded-md border border-border bg-muted px-2 py-0.5 text-[10.5px] text-muted-foreground"
                           >
                             Removed
-                            <span className="font-mono text-[11.5px] line-through decoration-destructive/50">
+                            <span className="rounded-[2px] bg-destructive/10 font-mono text-[11.5px] line-through decoration-destructive decoration-2">
                               {price}
                             </span>
                           </span>
@@ -241,7 +262,7 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
                             className="inline-flex items-baseline gap-1.5 rounded-md border border-foreground/20 bg-foreground/5 px-2 py-0.5 text-[10px]"
                           >
                             Added
-                            <span className="font-mono text-[11.5px] font-medium">{price}</span>
+                            <span className="rounded-[2px] bg-foreground/10 px-0.5 font-mono text-[11.5px] font-medium">{price}</span>
                           </span>
                         ))}
                       </div>

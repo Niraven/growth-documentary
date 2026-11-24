@@ -18,6 +18,9 @@ import { adLibraryLinks } from '@/lib/adLinks'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+const displayDate = (iso: string) =>
+  `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`
+
 const monthKey = (date: Date): string =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
 
@@ -121,7 +124,9 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
 
   return (
     <section aria-labelledby="sources-heading" data-testid="sources-board" className="mt-8">
-      <h3 className="section-title">Sources behind this report</h3>
+      <h3 id="sources-heading" className="section-title">
+        Sources behind this report
+      </h3>
       <div className="source-ledger">
         <Lane
           icon={<Archive className="size-3.5" />}
@@ -137,7 +142,7 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
             value={`${timeline.coverage.sampled}/${timeline.coverage.available}`}
             label="captures read / listed in the index"
           />
-          <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+          <p className="mt-2 font-mono text-[10px] tracking-normal text-muted-foreground">
             {timeline.captures[0]?.label} — {timeline.captures[timeline.captures.length - 1]?.label}
           </p>
         </Lane>
@@ -174,7 +179,7 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
               />
               <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                 {archives.last
-                  ? `Newest ${archives.last.slice(6, 8)} ${MONTHS[Number(archives.last.slice(4, 6)) - 1]} ${archives.last.slice(0, 4)}`
+                  ? `Newest ${Number(archives.last.slice(6, 8))} ${MONTHS[Number(archives.last.slice(4, 6)) - 1]} ${archives.last.slice(0, 4)}`
                   : ''}
                 {archives.captures[0] ? (
                   <a
@@ -248,7 +253,7 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
                   )
                 })}
               </div>
-              <div className="mt-1 flex justify-between font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
+              <div className="mt-1 flex justify-between font-mono text-[9px] tracking-normal text-muted-foreground">
                 <span>{shortMonth(mentionMonths[0])}</span>
                 <span>{shortMonth(mentionMonths[mentionMonths.length - 1])}</span>
               </div>
@@ -312,14 +317,14 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
                 href={story.url}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-start justify-between gap-3 py-2.5 transition-colors hover:bg-muted/20"
+                className="story-link flex w-full min-h-11 items-start justify-between gap-3 py-2.5 transition-colors hover:bg-muted/20"
               >
                 <span className="min-w-0">
-                  <span className="block text-[12.5px] font-medium leading-snug">
+                  <span className="block text-sm font-medium leading-snug underline underline-offset-4">
                     {story.title}
                   </span>
-                  <span className="mt-0.5 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted-foreground">
-                    {story.createdAt.slice(0, 10)} · {story.points} points · {story.comments}{' '}
+                  <span className="mt-0.5 block font-mono text-[9.5px] tracking-normal text-muted-foreground">
+                    {displayDate(story.createdAt)} · {story.points} points · {story.comments}{' '}
                     comments
                   </span>
                 </span>
@@ -327,6 +332,17 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
               </a>
             ))}
           </div>
+          {mentions.stories.length < mentions.total && (
+            <a
+              className="inline-flex min-h-11 items-center gap-1 text-sm underline underline-offset-4"
+              href={`https://hn.algolia.com/?${new URLSearchParams({ query: timeline.domain, type: 'story', sort: 'byDate' })}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Search more stories about {timeline.domain} on Hacker News{' '}
+              <ArrowUpRight className="size-4" />
+            </a>
+          )}
         </div>
       ) : null}
 

@@ -60,3 +60,31 @@ describe('marketing brief', () => {
       expect(md).toContain(text)
   })
 })
+
+it('keeps the latest capture outside the movement list and exports the same takeaway', () => {
+  const result = marketingBrief(report)
+  expect(result.rows.map((r) => r.field)).toEqual(['Headline', 'Page title', 'Monthly prices'])
+  expect(result.latest?.ts).toBe(b.ts)
+  expect(result.takeaway).toContain(`“Later” in the ${b.label} capture`)
+  expect(result.markdown).toContain(result.takeaway)
+  expect(result.markdown).toContain(result.scope)
+})
+it('describes amounts, not a matched plan or a manufactured headline change', () => {
+  const result = marketingBrief({
+    ...report,
+    captures: [{ ...a, prices: ['$2/mo', '$8/mo'] }, b],
+    changes: [],
+  })
+  for (const part of [
+    'No comparable headline change',
+    '$2–$8/mo',
+    '$20–$80/mo',
+    'not matched plans',
+  ])
+    expect(result.takeaway).toContain(part)
+})
+it('does not invent a takeaway price when the latest capture lacks monthly strings', () => {
+  const result = marketingBrief({ ...report, captures: [a, { ...b, prices: ['$700/year'] }] })
+  expect(result.takeaway).toContain('No comparable monthly amounts')
+  expect(result.takeaway).not.toContain('$')
+})

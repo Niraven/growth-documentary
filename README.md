@@ -39,13 +39,13 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 ## What a report contains
 
-**What moved.** The brief pairs the latest comparable headline and title changes with the first and latest comparable monthly ranges and the last readable capture. If the latest capture has no monthly amounts, the brief does not carry an old price forward. **Copy brief** exports the target, checked date, coverage, observations and dated links as Markdown. [Design and verification notes](docs/DESIGN.md).
+**What moved.** The opening takeaway summarizes the sampled wording and monthly amounts, not a change to a matched plan. Each row uses its own dated sources. The brief pairs the latest comparable headline and title changes with the first and latest comparable monthly ranges and the last readable capture. If the latest capture has no monthly amounts, the brief does not carry an old price forward. **Copy brief** exports the target, checked date, coverage, observations and dated links as Markdown. [Design and verification notes](docs/DESIGN.md).
 
 **Coverage.** The period the report actually covers, how many captures were read, how many the index listed, and a strip that marks every capture read and every day a change was found. Gaps are visible on purpose: the space between dots is unread, not unchanged.
 
 **Changes.** Consecutive readable captures are compared field by field. The earliest capture is the baseline, not a change. The log shows the newest observations first and can be filtered by field.
 
-**Compare.** Pick any two captures and see them side by side. The page title uses a character-level diff (`Basecamp: Pricing` → `Basecamp — Pricing`); the headline uses a word-level diff, and a wholesale replacement is shown as two whole states rather than an invented sentence. Price removals and additions are labelled, not encoded as negative numbers.
+**Compare.** Compare starts with the earliest and latest readable captures, not the brief’s latest wording change. Choose another pair to apply those dates to every field. Prices quote all extracted strings, including non-monthly amounts. The page title uses a character-level diff (`Basecamp: Pricing` → `Basecamp — Pricing`); punctuation-only edits show both titles intact so the changed mark stays readable; the headline uses a word-level diff, and a wholesale replacement is shown as two whole states rather than an invented sentence. Price removals and additions are labelled, not encoded as negative numbers.
 
 ![Compare two archived captures](docs/brief-v08/desktop-compare.png)
 
@@ -57,7 +57,7 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 **Site size.** In parallel, the site's archived sitemap is read for a page count and — when the site publishes `lastmod` dates — additions per month. When those dates cluster into one month, the panel says so instead of drawing a growth curve the data cannot support.
 
-**Change matrix.** A second, smaller chart places the field observations on a calendar grid: rows are page title, headline and price string; columns are calendar months. Empty months stay visible. The baseline is never counted as a change. It is a shape of the record, not a trend line.
+**Change matrix.** A second, smaller chart places the field observations on a calendar grid: rows are page title, headline and price string; columns are calendar months. Empty months stay visible. Numbers count observations (not just presence); the summary gives the total and month span. The baseline is never counted as a change. It is a shape of the record, not a trend line.
 
 ![Change matrix of page title, headline and price observations by month](docs/brief-v08/mobile-matrix.png)
 

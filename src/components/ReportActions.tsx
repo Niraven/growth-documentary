@@ -53,7 +53,7 @@ export function ReportActions({ report, savedId, savedAt, saving, onSave }: Prop
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="report-actions flex flex-wrap items-center gap-2">
       <Button
         onClick={async () => {
           try {

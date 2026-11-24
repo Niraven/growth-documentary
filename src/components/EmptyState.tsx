@@ -26,6 +26,9 @@ export function EmptyState() {
           29 May 2026 capture ↗
         </a>
         <p>“Pick a package and try Basecamp for free.”</p>
+        <small className="block mt-3">
+          Monthly amounts in this capture: <strong>$50/mo</strong> and <strong>$299/mo</strong>.
+        </small>
       </div>
       <a className="sample-link" href="?url=basecamp.com%2Fpricing">
         Open Basecamp report →

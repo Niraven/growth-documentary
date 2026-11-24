@@ -68,7 +68,7 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 | [Hacker News](https://news.ycombinator.com/) | public stories whose submitted URL points at the host, with links | does not count name mentions, comments or all discussion |
 | Ad libraries | four manual, pre-filled public libraries | does not scrape or claim spend |
 
-Each lane shows **read**, **no rows** or **unread**. An unavailable provider is never drawn as zero. The lanes are checked when the report is opened; only the Internet Archive captures inside the frozen report are saved. Design notes: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
+Each lane shows **read**, **no rows** or **unread**; a pending check says **reading**. An unavailable provider is never drawn as zero. The lanes are checked when the report is opened; a successful read may be cached briefly. Only the Internet Archive captures inside the frozen report are saved. Design notes: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 
 ![Evidence lanes with archive coverage, Hacker News stories and manual ad libraries](docs/evidence-lanes.png)
 

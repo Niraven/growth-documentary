@@ -41,7 +41,7 @@ in behind a server-side adapter with:
    page change;
 4. retention rules that match the provider's licence.
 
-A licensed adapter is **not** included in v0.6.0. The free manual links are.
+A licensed adapter is **not** included in v0.7.0. The free manual links are.
 
 ## What this means for a report
 

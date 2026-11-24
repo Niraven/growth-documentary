@@ -5,12 +5,16 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CoverageStrip } from '@/components/CoverageStrip'
 import { SiteGrowth } from '@/components/SiteGrowth'
+import { ChangeMatrix } from '@/components/ChangeMatrix'
 
 const PriceTrail = lazy(() =>
   import('@/components/PriceTrail').then((module) => ({ default: module.PriceTrail })),
 )
 const AdLibraryPanel = lazy(() =>
   import('@/components/AdLibraryPanel').then((module) => ({ default: module.AdLibraryPanel })),
+)
+const SourcesBoard = lazy(() =>
+  import('@/components/SourcesBoard').then((module) => ({ default: module.SourcesBoard })),
 )
 
 export type { LiveCapture, LiveChange, LiveData }
@@ -165,6 +169,14 @@ export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string
           <PriceTrail captures={data.captures} changes={data.changes} />
         </Suspense>
       </div>
+
+      <div className="mt-4">
+        <ChangeMatrix captures={data.captures} changes={data.changes} />
+      </div>
+
+      <Suspense fallback={null}>
+        <SourcesBoard key={`${data.domain}${data.path}`} timeline={data} />
+      </Suspense>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div>

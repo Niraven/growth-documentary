@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { buildTimeline, normaliseTarget, TimelineError, type BuildOptions } from './core.js'
 import { buildSiteInfo } from './site.js'
+import { buildSources } from './sources.js'
 import { fetchLive, type LiveOptions } from './live.js'
 import { ReportStore, defaultReportFile } from './store.js'
 import type { Timeline } from '../shared/timeline.js'
@@ -10,6 +11,8 @@ export type ApiOptions = BuildOptions & {
   rateLimit?: number
   /** Sitemap checks allowed per client per minute. */
   siteRateLimit?: number
+  /** Public-source checks allowed per client per minute. */
+  sourceRateLimit?: number
   /** Live page checks allowed per client per minute. */
   liveRateLimit?: number
   /** Saves allowed per client per minute. */
@@ -20,6 +23,8 @@ export type ApiOptions = BuildOptions & {
   cacheTtlMs?: number
   /** Sitemap cache lifetime in milliseconds. */
   siteCacheTtlMs?: number
+  /** Public-source cache lifetime in milliseconds. */
+  sourceCacheTtlMs?: number
   /** Injectable store, used by tests. */
   store?: ReportStore
   /** Path for the default store. */
@@ -32,9 +37,9 @@ export type ApiOptions = BuildOptions & {
 
 type CacheEntry = { at: number; payload: string }
 type Bucket = { count: number; reset: number }
-type Scope = 'report' | 'site' | 'live' | 'save'
+type Scope = 'report' | 'site' | 'sources' | 'live' | 'save'
 
-const VERSION = '0.6.0'
+const VERSION = '0.7.0'
 const SAVED_ID = /^[A-Za-z0-9_-]{6,24}$/
 
 function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
@@ -73,11 +78,13 @@ export function createApi(options: ApiOptions = {}) {
   const {
     rateLimit = 8,
     siteRateLimit = 20,
+    sourceRateLimit = 6,
     liveRateLimit = 4,
     saveRateLimit = 6,
     cacheSize = 100,
     cacheTtlMs = 10 * 60 * 1000,
     siteCacheTtlMs = 30 * 60 * 1000,
+    sourceCacheTtlMs = 15 * 60 * 1000,
     store = new ReportStore(options.storeFile ?? defaultReportFile()),
     live = {},
     maxBodyBytes = 16_000,
@@ -86,6 +93,7 @@ export function createApi(options: ApiOptions = {}) {
 
   const cache = new Map<string, CacheEntry>()
   const siteCache = new Map<string, CacheEntry>()
+  const sourceCache = new Map<string, CacheEntry>()
   const buckets = new Map<string, Bucket>()
 
   const limited = (client: string, scope: Scope) => {
@@ -93,11 +101,13 @@ export function createApi(options: ApiOptions = {}) {
     const limit =
       scope === 'site'
         ? siteRateLimit
-        : scope === 'live'
-          ? liveRateLimit
-          : scope === 'save'
-            ? saveRateLimit
-            : rateLimit
+        : scope === 'sources'
+          ? sourceRateLimit
+          : scope === 'live'
+            ? liveRateLimit
+            : scope === 'save'
+              ? saveRateLimit
+              : rateLimit
     const now = Date.now()
     if (buckets.size > 500) {
       for (const [address, entry] of buckets) {
@@ -187,6 +197,7 @@ export function createApi(options: ApiOptions = {}) {
         endpoints: [
           { method: 'GET', path: '/api/timeline?url=', purpose: 'dated archive timeline' },
           { method: 'GET', path: '/api/site?url=', purpose: 'archived sitemap size' },
+          { method: 'GET', path: '/api/sources?url=', purpose: 'public discussion and second archive lanes' },
           { method: 'GET', path: '/api/live?url=', purpose: 'opt-in current page read' },
           { method: 'GET', path: '/api/reports', purpose: 'saved report summaries' },
           { method: 'POST', path: '/api/reports', purpose: 'freeze a report' },
@@ -207,7 +218,7 @@ export function createApi(options: ApiOptions = {}) {
       return
     }
 
-    if (route === '/timeline' || route === '/site' || route === '/live') {
+    if (route === '/timeline' || route === '/site' || route === '/sources' || route === '/live') {
       if (method !== 'GET' && method !== 'HEAD') {
         send(res, 405, { error: 'GET only' }, { allow: 'GET, HEAD' })
         return
@@ -255,6 +266,32 @@ export function createApi(options: ApiOptions = {}) {
         try {
           const check = await fetchLive(target, live)
           send(res, 200, check, { 'cache-control': 'no-store' })
+        } catch (error) {
+          handleError(res, error)
+        }
+        return
+      }
+
+      if (route === '/sources') {
+        if (limited(client, 'sources')) {
+          send(res, 429, { error: 'Too many source checks from this client. Wait a minute.' }, { 'retry-after': '60' })
+          return
+        }
+        const key = `sources:${cacheKeyFor(target)}`
+        const hit = cachedJson(sourceCache, key, sourceCacheTtlMs)
+        if (hit) {
+          res.setHeader('x-cache', 'hit')
+          send(res, 200, JSON.parse(hit), { 'cache-control': 'public, max-age=300' })
+          return
+        }
+        try {
+          const sources = await buildSources(target, {
+            fetchImpl: buildOptions.fetchImpl,
+            timeoutMs: buildOptions.timeoutMs,
+          })
+          remember(sourceCache, key, JSON.stringify(sources), cacheSize)
+          res.setHeader('x-cache', 'miss')
+          send(res, 200, sources, { 'cache-control': 'public, max-age=300' })
         } catch (error) {
           handleError(res, error)
         }
@@ -374,7 +411,7 @@ export function createApi(options: ApiOptions = {}) {
     }
 
     send(res, 404, {
-      error: 'Unknown endpoint. Use /api/timeline, /api/site, /api/live or /api/reports.',
+      error: 'Unknown endpoint. Use /api/timeline, /api/site, /api/sources, /api/live or /api/reports.',
     })
   }
 }

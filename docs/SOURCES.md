@@ -9,6 +9,8 @@ where it came from and what kind of evidence it is.
 |---|---|---|---|---|
 | Wayback CDX + snapshots | `web.archive.org/cdx/search/cdx`, `web.archive.org/web/<ts>id_/<url>` | Yes — capture timestamp | Dated title, headline and price changes | Shipped |
 | Wayback sitemap snapshot | CDX for `sitemap*.xml`, archived copy | Yes — capture timestamp + self-reported `lastmod` | Page count and additions per month | Shipped |
+| Arquivo.pt index | `arquivo.pt/textsearch?versionHistory=` | Yes — capture timestamp | Second archive coverage lane; newest replay links | Shipped as an independent lane, not merged into the diff |
+| Hacker News | `hn.algolia.com/api/v1/search_by_date` | Yes — story timestamp | Public stories whose submitted URL host matches the target | Shipped as an independent lane |
 | Live page read | Target host, on demand | No — read time only | Current title, headline, prices; comparison against the latest capture | Shipped, opt-in |
 | Common Crawl index | `index.commoncrawl.org` | Yes — crawl ID/date | A second dated sample for pages Wayback lacks | Planned; WARC range read and licence check required |
 | urlscan.io | Search API + result DOM | Yes — scan date | Extra dated samples and a rendered-page artifact | Planned; API key and quota required |

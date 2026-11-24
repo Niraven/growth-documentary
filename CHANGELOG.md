@@ -4,6 +4,48 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-11-24
+
+A report that shows more of the public web, while keeping the dated page evidence
+separate from the context.
+
+### Added
+
+- **Evidence lanes.** A new report section checks four public lanes independently:
+  Internet Archive (the only source of dated changes), Arquivo.pt (a second public
+  archive index), Hacker News (stories whose submitted URL points at the host), and
+  the four manual ad libraries. Each lane shows `read`, `no rows` or `unread`; a
+  blocked provider is never zero. A lane failure does not fail the timeline.
+- **Arquivo.pt coverage.** A keyless public archive index is queried for each
+  target; the newest unique captures are linked to the replay page. It is a
+  coverage lane, not a second dated diff.
+- **Hacker News lane.** Public story titles, dates, points, comments and discussion
+  links are shown for stories whose submitted URL host matches the target. The
+  lane counts links, not name mentions or comments, and states its last-two-year,
+  100-result cap.
+- **`GET /api/sources`.** A cached, rate-limited endpoint returns both public lanes
+  with explicit statuses and notes.
+- **Change matrix.** A calendar heatmap of page-title, headline and price-string
+  observations by month. The baseline is excluded; empty months stay visible.
+- **Mentions chart.** Monthly matched-story counts over the last 24 months, tied
+  to the cited story list.
+
+### Changed
+
+- The report now distinguishes **dated page evidence** from **public context** in
+  both layout and copy. Arquivo.pt is not merged into the Wayback diff.
+- README, SPEC, source matrix and screenshots document the lanes and the new API.
+
+### Evidence
+
+- 188 unit tests: 51 core, 16 handler, 6 sitemap, 7 store, 50 live, 5 export,
+  14 contract, 16 compare, 2 citation, 3 ad-link, 2 archive-url, 8 price-axis,
+  3 mentions, 2 Arquivo, 1 source router, 2 change-matrix.
+- `pnpm check` green; independent review of the exact release tree.
+- axe-core WCAG 2.1 A/AA: 0 violations on the report.
+- Live source check: `basecamp.com/pricing` → 17 HN stories, Arquivo.pt estimate
+  42 captures; both lanes rendered with their own status.
+
 ## [0.6.0] — 2026-11-24
 
 A free visual view, free ad-library links, and a price chart rebuilt around the
@@ -259,6 +301,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.7.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.7.0
 [0.6.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.6.0
 [0.5.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.5.0
 [0.4.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.4.0

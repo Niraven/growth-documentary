@@ -1,6 +1,6 @@
 # Product spec — Growth Documentary
 
-Status: implemented (v0.6.0). This file is the contract; the README explains usage.
+Status: implemented (v0.7.0). This file is the contract; the README explains usage.
 
 ## Problem
 
@@ -37,6 +37,9 @@ When I need to show what a competitor changed on a public page, I want a dated l
 
 - **Compare:** any two readable captures from the same report. Page title uses a character-level LCS; headline uses a word-level LCS; a replacement with less than 35% shared words is shown as two whole states, not an interleaved sentence. Price deltas are labelled Removed/Added.
 - **Monthly price range:** one bar per calendar month in which monthly (`/mo`, `/month`) price strings were read. The x-axis keeps one slot per month, so empty months are visible gaps. Each bar is the min–max of those strings; annual, one-time and per-seat amounts are excluded. A triangle above the plot marks a month with a price-change row. With fewer than two such months the chart is not rendered.
+- **Change matrix:** one cell per field (`title`, `headline`, `price`) per calendar month, baseline excluded. Empty months stay visible. Shade encodes the number of observations in that field/month, not a price, a trend or a growth rate.
+- **Evidence lanes:** independent public lanes for Internet Archive (dated page evidence), Arquivo.pt (second archive index), Hacker News (public stories whose submitted URL host matches the target), sitemap (page count), and ad libraries (manual links). A lane is `read`, `no rows` or `unread`; an unavailable lane is never a zero. Only the Internet Archive lane feeds the dated changes.
+- **Mentions chart:** monthly count of matched HN stories over the last 24 months, with the top stories linked. It is public discussion, not a truth score or a complete count.
 - **Archived page view:** an opt-in sandboxed iframe of the selected capture's `web.archive.org` URL. It is a rendering of archived HTML, not a pixel screenshot, and creates no new claim. No server-side browser, no screenshot service, no proxying.
 - **Ad libraries:** four external, pre-filled links to public ad libraries (Meta, Google, TikTok, LinkedIn). The server never fetches them. They are not evidence rows and do not imply spend. There is no free official API for general US commercial ads; an optional licensed provider is the only future automatic path.
 - **Citation:** coverage window, captures read, field changes (baseline excluded), access date, source link.
@@ -44,6 +47,8 @@ When I need to show what a competitor changed on a public page, I want a dated l
 **Live check output:** `{ domain, path, fetchedAt, finalUrl, title, h1, prices, robots: "allowed" }`. It is not a `Capture`, has no archive timestamp, and never enters the timeline.
 
 **Site output:** page count, dated entries, additions per month, archived copy date, and a plain note when no sitemap exists.
+
+**Sources output:** `{ domain, checkedAt, mentions, archives }`. `mentions` is `{ provider, status, total, truncated, months, stories, note, checkedAt }`; `archives` is `{ provider, status, count, first, last, captures, note, checkedAt }`. `archives.count` is the number of unique rows inspected, not the provider's estimate; the note carries the estimate. Both lanes are independently optional: a blocked provider returns `status: "unavailable"` with a note, not an empty array presented as zero.
 
 **Sampling**
 
@@ -63,6 +68,10 @@ When I need to show what a competitor changed on a public page, I want a dated l
 - Invalid targets fail with a 4xx and a human sentence, before any network call.
 - Dev and production serve the same handler.
 - The dated timeline reads only from `web.archive.org`; sitemaps are read from their archived copy.
+- Source lanes are independent: an unavailable HN or Arquivo.pt check must not fail the timeline, and must not be rendered as zero.
+- HN counts only stories whose submitted URL host matches the target; title-only mentions and comments are not counted.
+- Arquivo.pt is a coverage lane only; it does not create dated changes unless a future adapter carries capture provenance and passes the same tests.
+- The change matrix may only count changes already present in the report; it may not interpolate or infer a missing month.
 - The live check is opt-in, per-request, and runs only after robots.txt allows it.
 - Saved reports are local, bounded, and written atomically; they are never recomputed on read.
 - A comparison view may only use captures already present in the report; it may not fetch or infer a missing capture.
@@ -82,13 +91,15 @@ When I need to show what a competitor changed on a public page, I want a dated l
 - HTML only, 2 MB cap, 15 s budget, no cookies, no credentials, no JavaScript, no retries.
 - The live page is read once per click; no automatic refresh.
 
-**Non-goals (v0.6)**
+**Non-goals (v0.7)**
 
 - Pixel-level visual diffs of arbitrary pages. The archived page view renders
   archived HTML; it does not compare pixels or claim a visual change.
 - Monitoring, alerts, accounts, multi-user sync.
 - Ad-library ingestion or spend estimates. Manual public-library links are allowed;
   server-side ad scraping or a licensed connector is not in this release.
+- Cookie-authenticated reads of X, LinkedIn, Instagram or Reddit.
+- A composite growth score that merges independent lanes.
 - Hiring data, launch events.
 - Using a live read as evidence of a dated change.
 
@@ -97,13 +108,20 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | Check | Evidence |
 |---|---|
 | Extraction, diff, sampling | `tests/core.test.ts` (51 tests) |
-| Handler routes, cache, limits, API index | `tests/api.test.ts` (15 tests) |
+| Handler routes, cache, limits, API index | `tests/api.test.ts` (16 tests) |
 | Sitemap parse and read | `tests/site.test.ts` (6 tests) |
 | Saved-report store | `tests/store.test.ts` (7 tests) |
 | Live read guards | `tests/live.test.ts` (50 tests) |
 | CSV/JSON export | `tests/export.test.ts` (5 tests) |
 | Contract guards and comparison | `tests/contract.test.ts` (14 tests) |
-| Compare, word/char diff, monthly range | `tests/compare.test.ts` (15 tests) |
+| Compare, word/char diff, monthly range | `tests/compare.test.ts` (16 tests) |
+| Price axis ladder | `tests/priceAxis.test.ts` (8 tests) |
+| Change matrix | `tests/changeMatrix.test.ts` (2 tests) |
+| HN link-match lane | `tests/mentions.test.ts` (3 tests) |
+| Arquivo.pt index lane | `tests/arquivo.test.ts` (2 tests) |
+| Source-lane router | `tests/sources.test.ts` (1 test) |
+| Archived URL guard | `tests/archiveUrl.test.ts` (2 tests) |
+| Ad links | `tests/adlinks.test.ts` (3 tests) |
 | Citation text | `tests/citation.test.ts` (2 tests) |
 | Type-check + production build | `pnpm build` |
 | Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 field changes, 24 months |
@@ -116,6 +134,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 ```
 UI (React) ── GET  /api/timeline?url=… ──┐
            ├─ GET  /api/site?url=… ──────┤
+           ├─ GET  /api/sources?url=… ───┤
            ├─ GET  /api/live?url=… ──────┤
            └─ /api/reports (CRUD) ───────┤
                                         ├─ normaliseTarget (validation, no I/O)
@@ -124,13 +143,15 @@ UI (React) ── GET  /api/timeline?url=… ──┐
                                         ├─ extractCapture → title / h1 / prices
                                         ├─ diffCaptures → changes + coverage
                                         ├─ sitemap: archived copy → page count, months
+                                        ├─ buildMentions: HN public index → link matches
+                                        ├─ buildArquivoInfo: public index → coverage lane
                                         ├─ ReportStore: atomic JSON, serialised writes
                                         └─ fetchLive: DNS/IP guard → robots → capped read
 ```
 
-`server/core.ts`, `server/site.ts`, `server/live.ts` and `server/store.ts` are framework-free and injectable (`fetchImpl`, `lookupImpl`, `delayMs`, `timeoutMs`, file path), which is what makes the tests deterministic.
+`server/core.ts`, `server/site.ts`, `server/live.ts`, `server/mentions.ts`, `server/arquivo.ts` and `server/store.ts` are framework-free and injectable (`fetchImpl`, `lookupImpl`, `delayMs`, `timeoutMs`, file path), which is what makes the tests deterministic.
 
-`shared/compare.ts` is client-safe pure logic: word and character LCS, capture comparison, monthly price parsing. `src/lib/citation.ts` is pure text. Neither module can fetch, so a derived view can never invent a capture.
+`shared/compare.ts` is client-safe pure logic: word and character LCS, capture comparison, monthly price parsing. `shared/changeMatrix.ts` is pure calendar aggregation; `shared/sources.ts` is the lane contract and guard. None of them can fetch, so a derived view can never invent a capture or a source row.
 
 ## Error taxonomy
 

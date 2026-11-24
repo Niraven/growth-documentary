@@ -55,6 +55,23 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 **Site size.** In parallel, the site's archived sitemap is read for a page count and — when the site publishes `lastmod` dates — additions per month. When those dates cluster into one month, the panel says so instead of drawing a growth curve the data cannot support.
 
+**Change matrix.** A second, smaller chart places the field observations on a calendar grid: rows are page title, headline and price string; columns are calendar months. Empty months stay visible. The baseline is never counted as a change. It is a shape of the record, not a trend line.
+
+![Change matrix of page title, headline and price observations by month](docs/change-matrix.png)
+
+**Evidence lanes.** Below the page evidence, four public lanes are checked separately:
+
+| Lane | What it adds | What it does not do |
+|---|---|---|
+| Internet Archive | the dated captures that produce the change rows | does not claim every capture was read |
+| [Arquivo.pt](https://arquivo.pt/) | an independent public archive index, with the newest captures linked | is not merged into the dated diff |
+| [Hacker News](https://news.ycombinator.com/) | public stories whose submitted URL points at the host, with links | does not count name mentions, comments or all discussion |
+| Ad libraries | four manual, pre-filled public libraries | does not scrape or claim spend |
+
+Each lane shows **read**, **no rows** or **unread**. An unavailable provider is never drawn as zero. The lanes are checked when the report is opened; only the Internet Archive captures inside the frozen report are saved. Design notes: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
+
+![Evidence lanes with archive coverage, Hacker News stories and manual ad libraries](docs/evidence-lanes.png)
+
 For each capture it extracts three things:
 
 | Field | Source |
@@ -139,6 +156,7 @@ Those limits are deliberate. A tool that guesses is worse than a tool that says 
 GET    /api
 GET    /api/timeline?url=stripe.com/pricing
 GET    /api/site?url=stripe.com/pricing
+GET    /api/sources?url=stripe.com/pricing
 GET    /api/live?url=stripe.com/pricing
 GET    /api/reports
 POST   /api/reports            {"url":"stripe.com/pricing"}
@@ -192,6 +210,37 @@ GET    /api/health
 
 When no sitemap is archived, `sitemapUrl` is `null`, counts are zero and `note` says why. The timeline never depends on this call.
 
+`GET /api/sources` checks two independent public lanes. Each lane has its own status; a blocked or slow provider is `unavailable`, not an empty result:
+
+```json
+{
+  "domain": "basecamp.com",
+  "checkedAt": "2026-11-24T07:15:30.321Z",
+  "mentions": {
+    "provider": "Hacker News",
+    "status": "read",
+    "total": 17,
+    "truncated": false,
+    "months": [{ "month": "2025-01", "count": 1 }],
+    "stories": [{ "id": "49288129", "title": "The 37signals Manager Playbook", "url": "https://news.ycombinator.com/item?id=49288129", "submittedUrl": "https://basecamp.com/managers", "createdAt": "2026-08-13T16:12:01.000Z", "points": 67, "comments": 17, "author": "tosh" }],
+    "note": "Public stories whose submitted URL points at basecamp.com. Last two years; up to 100 results.",
+    "checkedAt": "2026-11-24T07:15:30.321Z"
+  },
+  "archives": {
+    "provider": "Arquivo.pt",
+    "status": "read",
+    "count": 41,
+    "first": "20190912105854",
+    "last": "20251209041311",
+    "captures": [{ "ts": "20251209041311", "label": "9 Dec 2025", "url": "https://arquivo.pt/noFrame/replay/20251209041311/https://basecamp.com/pricing/" }],
+    "note": "Arquivo.pt's public index estimates 42 captures; 41 unique rows were inspected and the newest capture is linked here.",
+    "checkedAt": "2026-11-24T07:15:30.321Z"
+  }
+}
+```
+
+The HN lane counts stories whose submitted URL host matches the target; it does not count comments or title-only mentions. The Arquivo lane is a coverage index, not a second dated diff.
+
 `POST /api/reports` computes (or reuses a cached) timeline and freezes it. `201` for a new save, `200` when the same snapshot is already saved:
 
 ```json
@@ -217,15 +266,17 @@ When no sitemap is archived, `sitemapUrl` is `null`, counts are zero and `note` 
 
 Status codes: `400` invalid target, `403` robots.txt disallows the live read, `404` nothing archived or no such saved report, `413` body over 16 kB or report too large to save, `415` live URL is not HTML, `429` rate limited, `502` archive or live page unreachable/unreadable, `504` timeout. Successful timelines are cached in memory for 10 minutes (`x-cache: hit|miss`).
 
-Rate limits per client per minute: 8 timelines, 20 sitemap reads, 4 live checks, 6 saves. The quota keys on the socket address. Behind a reverse proxy every user shares the proxy's address, so either key on a trusted `X-Forwarded-For` or set the quota high enough for the whole proxy.
+Rate limits per client per minute: 8 timelines, 20 sitemap reads, 6 public-source checks, 4 live checks, 6 saves. The quota keys on the socket address. Behind a reverse proxy every user shares the proxy's address, so either key on a trusted `X-Forwarded-For` or set the quota high enough for the whole proxy.
 
 ## Architecture
 
 ```
 shared/timeline.ts   contract, guards, snapshot comparison, used by both sides
 shared/compare.ts    word/char diff, capture comparison, monthly price parsing
+shared/changeMatrix.ts  calendar matrix of field observations
+shared/sources.ts   source-lane contract and guards (HN + Arquivo.pt)
 src/                 React 19 UI (Vite, Tailwind 4, Radix, shadcn-style primitives)
-  components/        report, coverage, price range, archive view, compare, saved list, live panel
+  components/        report, coverage, price range, change matrix, evidence lanes, archive view, compare, saved list, live panel
   lib/export.ts      CSV (formula-safe) and JSON downloads
   lib/citation.ts    ready-to-paste citation
   lib/adLinks.ts     free public ad-library links (no server call)
@@ -233,6 +284,9 @@ src/                 React 19 UI (Vite, Tailwind 4, Radix, shadcn-style primitiv
   lib/priceAxis.ts   1/2/5 × 10^n tick ladder for the price chart
 server/
   archive.ts         archive transport: CDX + snapshots, origin-locked
+  mentions.ts        Hacker News public story index (link match only)
+  arquivo.ts         Arquivo.pt public index coverage lane
+  sources.ts         independent source-lane router
   core.ts            pure extraction, diff and adaptive sampling (no HTTP)
   site.ts            sitemap read, also through the archive
   live.ts            opt-in live read: DNS/IP guard, robots.txt, caps
@@ -248,7 +302,7 @@ Data source: [Internet Archive Wayback Machine](https://web.archive.org/) CDX + 
 
 ### Why the Archive, not a crawler
 
-A crawler can tell you what a page says now. It cannot tell you what the page said on a date, because it was not there. The dated rows therefore come from the one public API that stores dated captures. A second historical source would need its own crawl date and provenance label before it could join a timeline; without that, it is a current-page read wearing a date's clothes.
+A crawler can tell you what a page says now. It cannot tell you what the page said on a date, because it was not there. The dated rows therefore come from the one public archive that stores readable captures. A second historical source would need its own crawl date and provenance label before it could join a timeline; Arquivo.pt is shown as an independent coverage lane, not silently merged into the Wayback diff.
 
 When a page is not archived at all, the honest answer is "no captures", not a scrape dressed up as history. The live check is offered as a separate, clearly labelled current-page read.
 
@@ -261,9 +315,9 @@ Source matrix, planned adapters and the inclusion rule for adding a source: [`do
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 179 unit tests (vitest) |
+| `pnpm test` | 188 unit tests (vitest) |
 | `pnpm lint` | oxlint |
-| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.6.0) |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.7.0) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting
@@ -278,9 +332,9 @@ Outbound access to `web.archive.org` is required. The optional live check adds u
 
 - A hosted, multi-user store (the current one is deliberately one file, one process)
 - Optional licensed ad-library connector behind a provider key; the free manual
-  links are in v0.6.0
+  links have been available since v0.6.0
 - Visual diff of archived screenshots for a requested page (the free archived
-  page view is in v0.6.0; a pixel diff is not)
+  page view has been available since v0.6.0; a pixel diff is not)
 - More sources: hiring pages, docs changelogs, launch notes — each with its own provenance label
 
 Not started, not claimed. Each roadmap item is not claimed until it ships.

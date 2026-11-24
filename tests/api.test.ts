@@ -73,7 +73,7 @@ describe('api handler', () => {
     await api(req, res)
     expect(state.status).toBe(200)
     expect(JSON.parse(state.body).ok).toBe(true)
-    expect(JSON.parse(state.body).version).toBe('0.6.0')
+    expect(JSON.parse(state.body).version).toBe('0.7.0')
   })
 
   it('describes the API at the root', async () => {
@@ -83,7 +83,7 @@ describe('api handler', () => {
     expect(state.status).toBe(200)
     const body = JSON.parse(state.body) as { name: string; endpoints: unknown[] }
     expect(body.name).toBe('growth-documentary')
-    expect(body.endpoints).toHaveLength(8)
+    expect(body.endpoints).toHaveLength(9)
   })
 
   it('returns site info and caches it', async () => {
@@ -118,6 +118,59 @@ describe('api handler', () => {
     expect(first.state.headers['x-cache']).toBe('miss')
 
     const second = fakeExchange('/site?url=example.com')
+    await api(second.req, second.res)
+    expect(second.state.status).toBe(200)
+    expect(second.state.headers['x-cache']).toBe('hit')
+  })
+
+  it('returns public source lanes and caches them', async () => {
+    const fetchImpl: FetchLike = async (url) => {
+      if (url.includes('hn.algolia.com')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            nbHits: 1,
+            hits: [
+              {
+                objectID: '1',
+                title: 'Example story',
+                url: 'https://example.com/pricing',
+                created_at: '2026-01-01T00:00:00Z',
+                points: 3,
+                num_comments: 1,
+                author: 'alice',
+              },
+            ],
+          }),
+          text: async () => '',
+        }
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          estimated_nr_results: 2,
+          response_items: [
+            {
+              tstamp: '20250101000000',
+              originalURL: 'https://example.com/pricing',
+              linkToNoFrame: 'https://arquivo.pt/noFrame/replay/20250101000000/https://example.com/pricing',
+            },
+          ],
+        }),
+        text: async () => '',
+      }
+    }
+    const api = createApi({ fetchImpl })
+    const first = fakeExchange('/sources?url=example.com')
+    await api(first.req, first.res)
+    expect(first.state.status).toBe(200)
+    expect(JSON.parse(first.state.body).mentions.status).toBe('read')
+    expect(JSON.parse(first.state.body).archives.status).toBe('read')
+    expect(first.state.headers['x-cache']).toBe('miss')
+
+    const second = fakeExchange('/sources?url=example.com')
     await api(second.req, second.res)
     expect(second.state.status).toBe(200)
     expect(second.state.headers['x-cache']).toBe('hit')

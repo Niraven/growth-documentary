@@ -1,8 +1,9 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { motion } from 'motion/react'
+import { MarketingBrief } from '@/components/MarketingBrief'
+import { marketingBrief } from '../shared/brief'
 import { Toaster, toast } from 'sonner'
-import { ArrowUpRight, Bookmark, ShieldCheck } from 'lucide-react'
+import { Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -57,7 +58,9 @@ export default function App() {
   }, [skin])
 
   const [savedId, setSavedId] = useState<string | null>(() =>
-    window.location.hash.startsWith('#report/') ? window.location.hash.slice('#report/'.length) : null,
+    window.location.hash.startsWith('#report/')
+      ? window.location.hash.slice('#report/'.length)
+      : null,
   )
   const [savedAt, setSavedAt] = useState<string | null>(null)
 
@@ -77,8 +80,6 @@ export default function App() {
   const [savedList, setSavedList] = useState<SavedSummary[]>([])
   const [savedLoading, setSavedLoading] = useState(false)
   const [savedError, setSavedError] = useState<string | null>(null)
-
-  const changeCount = live ? Math.max(0, live.changes.length - 1) : 0
 
   const build = async (target: string) => {
     setLoading(true)
@@ -101,10 +102,7 @@ export default function App() {
       const share = new URLSearchParams(window.location.search)
       share.set('url', target)
       window.history.replaceState(null, '', `${window.location.pathname}?${share.toString()}`)
-      window.setTimeout(
-        () => document.getElementById('live')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-        120,
-      )
+      window.scrollTo(0, 0)
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError') {
         setError('That took too long. The archive may be slow — try again in a minute.')
@@ -162,10 +160,7 @@ export default function App() {
         '',
         `${window.location.pathname}${window.location.search}#report/${payload.id}`,
       )
-      window.setTimeout(
-        () => document.getElementById('live')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-        120,
-      )
+      window.scrollTo(0, 0)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not open that saved report')
     } finally {
@@ -258,31 +253,34 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const pick = (target: string) => {
-    setDomain(target)
-    void build(target)
-  }
-
-  const share = async () => {
-    if (!live) {
-      toast.error('Build a report first', { description: 'Then share the link to it.' })
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      toast.success('Link copied', { description: `${live.domain}${live.path}` })
-    } catch {
-      toast.error('Could not copy the link', { description: 'Copy the address bar instead.' })
-    }
-  }
-
-  const heroStats: [string, string][] = live
-    ? [
-        [String(live.coverage.sampled), 'captures read'],
-        [String(changeCount), 'field changes'],
-        [`${live.coverage.months} mo`, 'coverage'],
-      ]
-    : []
+  const targetForm = (
+    <form onSubmit={run} className="mt-6 max-w-xl">
+      <label
+        htmlFor="domain"
+        className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
+      >
+        Public page URL
+      </label>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          id="domain"
+          name="domain"
+          value={domain}
+          onChange={(event) => setDomain(event.target.value)}
+          placeholder="https://basecamp.com/pricing"
+          autoComplete="off"
+          spellCheck={false}
+          className="h-11 w-full rounded-xl border border-border bg-card px-3.5 text-sm shadow-xs outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring/40"
+        />
+        <Button type="submit" disabled={loading || domain.trim().length === 0}>
+          {loading ? 'Reading archive…' : 'Build timeline'}
+        </Button>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Up to 24 archive captures. Usually 20–40 seconds.
+      </p>
+    </form>
+  )
 
   return (
     <>
@@ -299,7 +297,7 @@ export default function App() {
           Skip to content
         </a>
 
-        <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md">
+        <header className="border-b border-border bg-card">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 md:px-8">
             <button
               onClick={() => setView('report')}
@@ -312,40 +310,26 @@ export default function App() {
                 alt=""
                 className="rounded-[6px]"
               />
-              <span className="font-display text-[15px] tracking-[-0.01em]">Growth Documentary</span>
+              <span className="font-display text-[15px] tracking-[-0.01em]">
+                Growth Documentary
+              </span>
             </button>
 
             <nav aria-label="Primary" className="flex items-center gap-2">
-              <span className="hidden font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground sm:inline">
-                Theme
-              </span>
-              <div
-                className="flex items-center gap-1 rounded-full border border-border bg-card p-1"
-                role="group"
+              <select
                 aria-label="Colour theme"
+                value={skin}
+                onChange={(e) => setSkin(e.target.value as typeof skin)}
+                className="theme-select"
               >
-                {(['day', 'paper', 'night'] as const).map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => setSkin(option)}
-                    aria-pressed={skin === option}
-                    title={option}
-                    className={`h-6 w-6 rounded-full border transition-transform hover:scale-105 ${
-                      option === 'day'
-                        ? 'border-[#e7e5e4] bg-[#fafaf9]'
-                        : option === 'paper'
-                          ? 'border-[#e3dac8] bg-[#f3efe4]'
-                          : 'border-[#26262a] bg-[#0a0a0b]'
-                    } ${skin === option ? 'ring-2 ring-ring ring-offset-2 ring-offset-background' : ''}`}
-                  >
-                    <span className="sr-only">{option} theme</span>
-                  </button>
-                ))}
-              </div>
+                <option value="day">Day</option>
+                <option value="paper">Paper</option>
+                <option value="night">Night</option>
+              </select>
               <Button
                 variant="ghost"
                 size="sm"
-                className="hidden sm:inline-flex"
+                className="inline-flex"
                 onClick={() => {
                   setView('saved')
                   void refreshSaved()
@@ -367,12 +351,6 @@ export default function App() {
               >
                 How it works
               </Button>
-              {live && !savedAt && (
-                <Button size="sm" type="button" onClick={share}>
-                  Share
-                  <ArrowUpRight />
-                </Button>
-              )}
             </nav>
           </div>
         </header>
@@ -401,97 +379,42 @@ export default function App() {
           <HowItWorks onBack={() => setView('report')} />
         ) : (
           <main id="main" className="mx-auto max-w-6xl px-5 pb-20 md:px-8">
-            <motion.section
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              className="grid gap-8 border-b border-border py-12 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
-            >
-              <div>
-                <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {live
-                    ? savedAt
-                      ? 'Saved report · public archive'
-                      : 'Live report · public archive'
-                    : 'Growth Documentary · public archive'}
-                </p>
-                <h1 className="mt-4 font-display text-[clamp(38px,5.6vw,64px)] leading-[0.95] tracking-[-0.04em]">
-                  {live ? (
-                    <>
-                      <span className="block break-words">{live.domain}</span>
-                      <span className="mt-1.5 block break-words text-[0.5em] leading-tight text-muted-foreground">
-                        {live.path}
-                      </span>
-                    </>
-                  ) : (
-                    'Paste a page. See what changed.'
-                  )}
-                </h1>
-                <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-                  {live
-                    ? `${live.coverage.sampled} readable captures across ${live.coverage.months} months, comparing page title, first headline and price strings. Every row links to the capture behind it.`
-                    : 'Paste a public page. Get a dated list of what changed on it, with the archived page behind every line. No estimates, no causal claims — receipts you can quote.'}
-                </p>
-
-                <form onSubmit={run} className="mt-6 max-w-xl">
-                  <label
-                    htmlFor="domain"
-                    className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
-                  >
-                    Public page URL
-                  </label>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <input
-                      id="domain"
-                      name="domain"
-                      value={domain}
-                      onChange={(event) => setDomain(event.target.value)}
-                      placeholder="https://basecamp.com/pricing"
-                      autoComplete="off"
-                      spellCheck={false}
-                      className="h-11 w-full rounded-xl border border-border bg-card px-3.5 text-sm shadow-xs outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring/40"
-                    />
-                    <Button type="submit" disabled={loading || domain.trim().length === 0}>
-                      {loading ? 'Reading archive…' : 'Build timeline'}
-                    </Button>
+            {live ? (
+              <>
+                <div className="report-heading">
+                  <div>
+                    <span className="metadata">
+                      {savedAt ? 'Saved' : 'Live'} page-history brief
+                    </span>
+                    <h1>
+                      {live.domain}
+                      <wbr />
+                      {live.path}
+                    </h1>
+                    <p>
+                      {marketingBrief(live).coverage} · Checked {live.checkedAt.slice(0, 10)} UTC
+                    </p>
                   </div>
-                  <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
-                    {savedAt
-                      ? 'This copy is frozen. Building again creates a new, separate report; the saved copy stays as it is.'
-                      : 'The exact URL, query string included; https:// is optional. Read from the archive only, up to 24 captures across two years — about 20–40 seconds.'}
-                  </p>
-                </form>
-              </div>
-
-              {live ? (
-                <div className="flex flex-wrap gap-2.5 md:justify-end">
-                  {heroStats.map(([value, label]) => (
-                    <div
-                      key={label}
-                      className="min-w-[104px] rounded-xl border border-border bg-card px-4 py-3 shadow-[0_1px_2px_rgba(21,18,16,0.04)]"
-                    >
-                      <p className="truncate font-display text-[22px] leading-none tracking-[-0.01em]">
-                        {value}
-                      </p>
-                      <p className="mt-1.5 text-[11px] leading-tight text-muted-foreground">{label}</p>
-                    </div>
-                  ))}
+                  <details className="target">
+                    <summary>Research another URL</summary>
+                    {targetForm}
+                  </details>
                 </div>
-              ) : (
-                <div className="hidden max-w-[230px] rounded-xl border border-border bg-card p-4 md:block">
-                  <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                    <ShieldCheck className="size-3.5" />
-                    The contract
+              </>
+            ) : (
+              <section className="landing">
+                <div>
+                  <span className="metadata">Pricing-page research</span>
+                  <h1>See how the offer changed.</h1>
+                  <p className="intro">
+                    Compare a competitor’s pricing and headlines over time. Bring the exact wording
+                    and dated captures to your next positioning review.
                   </p>
-                  <ul className="mt-3 space-y-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
-                    <li>Every row cites its capture.</li>
-                    <li>No revenue, traffic or causal guesses.</li>
-                    <li>A missing value is a gap, not a deletion.</li>
-                  </ul>
+                  {targetForm}
                 </div>
-              )}
-            </motion.section>
-
+                {!loading && <EmptyState />}
+              </section>
+            )}
             {loading && <LiveLoading domain={domain} />}
             {error && (
               <div
@@ -502,7 +425,7 @@ export default function App() {
               </div>
             )}
             {live && !loading && (
-              <div className="pt-6">
+              <div className="pt-2">
                 <ReportActions
                   report={live}
                   savedId={savedId}
@@ -513,22 +436,37 @@ export default function App() {
               </div>
             )}
             {live && (
-              <div className="pt-4">
-                <LiveReport data={live} savedAt={savedAt} />
-              </div>
+              <>
+                <nav className="report-nav" aria-label="Report sections">
+                  {['Brief', 'Compare', 'Evidence', 'Changes'].map((label) => (
+                    <button
+                      key={label}
+                      onClick={() => {
+                        const el = document.getElementById(label.toLowerCase())
+                        el?.focus({ preventScroll: true })
+                        el?.scrollIntoView()
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+                <MarketingBrief report={live} />
+                <div id="compare" tabIndex={-1}>
+                  <Suspense fallback={null}>
+                    <CompareCaptures captures={live.captures} />
+                  </Suspense>
+                </div>
+                <LiveReport data={live} />
+                <details className="inspect">
+                  <summary>Inspect archived HTML or check the current page</summary>
+                  <Suspense fallback={null}>
+                    <ArchivePreview captures={live.captures} />
+                  </Suspense>
+                  <LivePanel report={live} />
+                </details>
+              </>
             )}
-            {live && !loading && (
-              <Suspense fallback={null}>
-                <ArchivePreview captures={live.captures} />
-              </Suspense>
-            )}
-            {live && !loading && <LivePanel report={live} />}
-            {live && !loading && (
-              <Suspense fallback={null}>
-                <CompareCaptures captures={live.captures} />
-              </Suspense>
-            )}
-            {!live && !loading && <EmptyState onPick={pick} />}
           </main>
         )}
 

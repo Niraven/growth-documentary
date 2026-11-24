@@ -43,24 +43,24 @@ export function CoverageStrip({ captures, changes }: Props) {
               title={`${capture.label}${marked ? ' · change observed' : ''}`}
             >
               {marked ? (
-                <span className="block h-6 w-[3px] rounded-full bg-accent-foreground/80" />
+                <span className="block h-6 w-1 rounded-full bg-foreground" />
               ) : (
-                <span className="block size-1.5 rounded-full bg-foreground/30" />
+                <span className="block size-2.5 rounded-full bg-good" />
               )}
             </span>
           )
         })}
       </div>
-      <div className="mt-1 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+      <div className="mt-1 flex items-center justify-between font-mono text-xs text-muted-foreground">
         <span>{captures[0].label}</span>
         <span>{captures[captures.length - 1].label}</span>
       </div>
-      <div className="mt-1.5 flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+      <div className="mt-1.5 flex items-center gap-4 font-mono text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-foreground/30" /> capture read
+          <span className="size-2.5 rounded-full bg-good" /> capture read
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-3 w-[3px] rounded-full bg-accent-foreground/80" /> day with change
+          <span className="h-3 w-1 rounded-full bg-foreground" /> day with change
         </span>
       </div>
       <ul className="sr-only">

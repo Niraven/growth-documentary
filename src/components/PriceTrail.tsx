@@ -41,7 +41,7 @@ export function PriceTrail({
     label: monthLabel(bucket.ts),
   }))
 
-  if (series.length < 2) return null
+  if (series.length === 0) return null
 
   const all = series.flatMap((bucket) => bucket.values)
   const maxValue = Math.max(...all)
@@ -56,8 +56,8 @@ export function PriceTrail({
 
   // A readable axis: 3–6 ticks on a 1/2/5 × 10^n ladder, top rounded up.
   const axis = priceAxis(maxValue)
-  const axisMax = axis.max
-  const ticks = axis.ticks
+  const axisMax = maxValue
+  const ticks = [...axis.ticks.filter((tick) => tick < axisMax - axis.step / 4), axisMax]
 
   const y = (value: number) => PAD.top + (1 - value / axisMax) * plotH
 
@@ -91,19 +91,31 @@ export function PriceTrail({
     <Card className="mt-3" data-testid="price-trail">
       <CardContent className="p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            Monthly price range · USD/mo · by month
-          </p>
-          <p className="font-mono text-[10.5px] text-muted-foreground">
+          <h3 className="section-title">Monthly price range · USD</h3>
+          <p className="hidden font-mono text-xs text-muted-foreground sm:block">
             Selected {selected.label} · {money(selected.values[0])}–
             {money(selected.values[selected.values.length - 1])}/mo
           </p>
         </div>
 
         <figure className="mt-3">
+          <label className="block sm:hidden">
+            Inspect a month
+            <select
+              className="block min-h-11 w-full rounded-lg border bg-card px-3"
+              value={selected.key}
+              onChange={(e) => setSelectedKey(e.target.value)}
+            >
+              {series.map((b) => (
+                <option key={b.key} value={b.key}>
+                  {b.label} · {money(b.values[0])}–{money(b.values[b.values.length - 1])}/mo
+                </option>
+              ))}
+            </select>
+          </label>
           <svg
             viewBox={`0 0 ${W} ${H}`}
-            className="h-auto w-full text-foreground"
+            className="h-auto w-full text-foreground max-sm:hidden"
             role="group"
             aria-label={`Monthly price range: ${series.length} months with monthly price strings, from ${money(minValue)} to ${money(maxValue)} per month. Each bar spans the lowest and highest monthly amount read in that month; a triangle above the plot marks a month with a price-change row.`}
           >
@@ -122,8 +134,8 @@ export function PriceTrail({
                   x={PAD.left - 10}
                   y={y(tick) + 3}
                   textAnchor="end"
-                  className="fill-current font-mono text-[9px] text-muted-foreground"
-                  fillOpacity={0.55}
+                  className="fill-current font-mono text-[11px] text-muted-foreground"
+                  fillOpacity={1}
                 >
                   {money(tick)}
                 </text>
@@ -201,13 +213,13 @@ export function PriceTrail({
                     y={y(high)}
                     width={barWidth}
                     height={Math.max(1, y(low) - y(high))}
-                    fill="currentColor"
-                    fillOpacity={isSelected ? 0.5 : 0.18}
+                    fill={isSelected ? 'var(--good)' : 'currentColor'}
+                    fillOpacity={isSelected ? 1 : 0.62}
                     stroke="currentColor"
                     strokeOpacity={isSelected ? 0.8 : 0.3}
                     strokeWidth={isSelected ? 1 : 0.5}
                   />
-                  {[low, high].map((value) => (
+                  {Array.from(new Set([low, high])).map((value) => (
                     <line
                       key={`cap-${value}`}
                       x1={cx - barWidth / 2 - 2}
@@ -248,7 +260,7 @@ export function PriceTrail({
                   <polygon
                     points={`${cx},${PAD.top - 2} ${cx + 3},${PAD.top - 8} ${cx - 3},${PAD.top - 8}`}
                     fill="currentColor"
-                    fillOpacity={0.65}
+                    fillOpacity={1}
                   />
                 </g>
               )
@@ -258,12 +270,7 @@ export function PriceTrail({
               const cx = monthCenter(bucket.ts)
               const labelEvery = slot < 18 ? 2 : 1
               if (index % labelEvery !== 0 && index !== series.length - 1) return null
-              const anchor =
-                index === series.length - 1 || cx > W - PAD.right - 10
-                  ? 'end'
-                  : cx < PAD.left + 10
-                    ? 'start'
-                    : 'middle'
+              const anchor = 'middle'
               return (
                 <g key={`tick-${bucket.key}`}>
                   <line
@@ -278,8 +285,8 @@ export function PriceTrail({
                     x={cx}
                     y={H - 20}
                     textAnchor={anchor}
-                    className="fill-current font-mono text-[8.5px] text-muted-foreground"
-                    fillOpacity={0.65}
+                    className="fill-current font-mono text-[10px] text-muted-foreground"
+                    fillOpacity={1}
                   >
                     {shortMonth(bucket.ts)}
                   </text>
@@ -287,8 +294,8 @@ export function PriceTrail({
                     x={cx}
                     y={H - 9}
                     textAnchor={anchor}
-                    className="fill-current font-mono text-[8px] text-muted-foreground"
-                    fillOpacity={0.5}
+                    className="fill-current font-mono text-[10px] text-muted-foreground"
+                    fillOpacity={1}
                   >
                     {`'${bucket.ts.slice(2, 4)}`}
                   </text>
@@ -298,46 +305,43 @@ export function PriceTrail({
           </svg>
 
           <figcaption className="mt-2 max-w-2xl text-[11.5px] leading-relaxed text-muted-foreground">
-            Each bar is one month: its ends are the lowest and highest <em>monthly</em> price string
-            read that month. The axis keeps one slot per month, so empty months stay empty. A
-            triangle above the plot marks a price-change row. Annual, one-time and per-seat amounts
-            are excluded. Tiers change, so this is a range per month — not a price index or a single
-            price over time.
+            Monthly amounts read in archived copy, not matched plan prices. Annual, one-time and
+            per-seat rates are excluded.{' '}
+            <span className="max-sm:hidden">
+              Bars span low to high; triangles mark price-string changes. Blank months have no
+              monthly read.
+            </span>
           </figcaption>
 
           <div className="mt-2 space-y-1" aria-live="polite">
-            <p className="text-[11.5px] text-muted-foreground">
-              Latest <span className="font-medium text-foreground">{latest.label}</span> ·{' '}
-              {money(latest.values[0])}–{money(latest.values[latest.values.length - 1])}/mo
-            </p>
-            <p className="text-[10.5px] leading-relaxed text-muted-foreground">
-              Selected {selected.label}: {money(selected.values[0])}–
-              {money(selected.values[selected.values.length - 1])}/mo · distinct monthly amounts:{' '}
-              {selected.values.map(money).join(' · ')}
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Amounts read in {selected.label}: {selected.values.map(money).join(' · ')}
             </p>
           </div>
 
-          <table className="sr-only">
-            <caption>Monthly price range by month</caption>
-            <thead>
-              <tr>
-                <th scope="col">Month</th>
-                <th scope="col">Lowest</th>
-                <th scope="col">Highest</th>
-                <th scope="col">Distinct monthly amounts</th>
-              </tr>
-            </thead>
-            <tbody>
-              {series.map((bucket) => (
-                <tr key={bucket.key}>
-                  <th scope="row">{bucket.label}</th>
-                  <td>{money(bucket.values[0])}</td>
-                  <td>{money(bucket.values[bucket.values.length - 1])}</td>
-                  <td>{bucket.values.length}</td>
+          <div className="sr-only">
+            <table>
+              <caption>Monthly price range by month</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Month</th>
+                  <th scope="col">Lowest</th>
+                  <th scope="col">Highest</th>
+                  <th scope="col">Distinct monthly amounts</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {series.map((bucket) => (
+                  <tr key={bucket.key}>
+                    <th scope="row">{bucket.label}</th>
+                    <td>{money(bucket.values[0])}</td>
+                    <td>{money(bucket.values[bucket.values.length - 1])}</td>
+                    <td>{bucket.values.length}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </figure>
       </CardContent>
     </Card>

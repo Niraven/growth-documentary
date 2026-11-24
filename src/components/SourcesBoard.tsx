@@ -93,11 +93,15 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
     const controller = new AbortController()
     const load = async () => {
       try {
-        const response = await fetch(`/api/sources?url=${encodeURIComponent(`${timeline.domain}${timeline.path}`)}`, {
-          signal: controller.signal,
-        })
+        const response = await fetch(
+          `/api/sources?url=${encodeURIComponent(`${timeline.domain}${timeline.path}`)}`,
+          {
+            signal: controller.signal,
+          },
+        )
         const payload: unknown = await response.json()
-        if (!response.ok) throw new Error(isErrorBody(payload) ? payload.error : 'Public-source check failed')
+        if (!response.ok)
+          throw new Error(isErrorBody(payload) ? payload.error : 'Public-source check failed')
         if (!isSourcesReport(payload)) throw new Error('Unexpected public-source report')
         setSources(payload)
       } catch (error) {
@@ -117,25 +121,11 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
 
   return (
     <section aria-labelledby="sources-heading" data-testid="sources-board" className="mt-8">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">
-            Beyond the page
-          </p>
-          <h3 id="sources-heading" className="mt-1 font-display text-2xl tracking-[-0.02em]">
-            Evidence lanes
-          </h3>
-        </div>
-        <p className="max-w-md text-right text-[11px] leading-relaxed text-muted-foreground">
-          Each lane is read separately. A missing answer stays unread — never a zero. Lanes are
-          checked now; only the Wayback timeline is frozen in a saved report.
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <h3 className="section-title">Sources behind this report</h3>
+      <div className="source-ledger">
         <Lane
           icon={<Archive className="size-3.5" />}
-          title="Internet Archive"
+          title="Dated evidence · Internet Archive"
           status={timeline.captures.length > 0 ? statusCopy.read : statusCopy.empty}
           footer={
             <p className="text-[10.5px] leading-snug text-muted-foreground">
@@ -152,13 +142,25 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
           </p>
         </Lane>
 
+        <div className="context-heading">
+          <h4>Related research</h4>
+          <p>
+            Checked separately, including when you reopen a saved brief. These sources do not
+            establish page changes.
+          </p>
+        </div>
         <Lane
           icon={<Globe2 className="size-3.5" />}
-          title="Arquivo.pt"
-          status={archives ? statusCopy[archives.status] : failed ? statusCopy.unavailable : pendingStatus}
+          title="Archive coverage · Arquivo.pt"
+          status={
+            archives ? statusCopy[archives.status] : failed ? statusCopy.unavailable : pendingStatus
+          }
           footer={
             <p className="text-[10.5px] leading-snug text-muted-foreground">
-              {archives?.note ?? (failed ? 'Second archive check did not finish.' : 'Reading a second public archive…')}
+              {archives?.note ??
+                (failed
+                  ? 'Second archive check did not finish.'
+                  : 'Reading a second public archive…')}
             </p>
           }
         >
@@ -166,9 +168,14 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
           ) : archives?.status === 'read' ? (
             <>
-              <NumberLine value={archives.count.toLocaleString()} label="unique captures inspected" />
+              <NumberLine
+                value={archives.count.toLocaleString()}
+                label="unique captures inspected"
+              />
               <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                {archives.last ? `Newest ${archives.last.slice(6, 8)} ${MONTHS[Number(archives.last.slice(4, 6)) - 1]} ${archives.last.slice(0, 4)}` : ''}
+                {archives.last
+                  ? `Newest ${archives.last.slice(6, 8)} ${MONTHS[Number(archives.last.slice(4, 6)) - 1]} ${archives.last.slice(0, 4)}`
+                  : ''}
                 {archives.captures[0] ? (
                   <a
                     href={archives.captures[0].url}
@@ -190,11 +197,16 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
 
         <Lane
           icon={<MessagesSquare className="size-3.5" />}
-          title="Hacker News"
-          status={mentions ? statusCopy[mentions.status] : failed ? statusCopy.unavailable : pendingStatus}
+          title="Public discussion · Hacker News"
+          status={
+            mentions ? statusCopy[mentions.status] : failed ? statusCopy.unavailable : pendingStatus
+          }
           footer={
             <p className="text-[10.5px] leading-snug text-muted-foreground">
-              {mentions?.note ?? (failed ? 'Public-discussion check did not finish.' : 'Reading public story titles…')}
+              {mentions?.note ??
+                (failed
+                  ? 'Public-discussion check did not finish.'
+                  : 'Reading public story titles…')}
             </p>
           }
         >
@@ -202,14 +214,34 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
           ) : mentions?.status === 'read' ? (
             <>
-              <NumberLine value={String(mentions.total)} label={mentions.truncated ? 'matched stories (lower bound)' : 'matched public stories, last two years'} />
-              <div className="mt-2 flex h-12 items-end gap-[3px]" data-testid="mentions-chart" role="img" aria-label={`Matched Hacker News stories per month; ${mentions.total} in total`}>
+              <NumberLine
+                value={String(mentions.total)}
+                label={
+                  mentions.truncated
+                    ? 'matched stories (lower bound)'
+                    : 'matched public stories, last two years'
+                }
+              />
+              <div
+                className="mt-2 flex h-12 items-end gap-[3px]"
+                data-testid="mentions-chart"
+                role="img"
+                aria-label={`Matched Hacker News stories per month; ${mentions.total} in total`}
+              >
                 {mentionMonths.map((month) => {
                   const count = counts.get(month) ?? 0
                   return (
-                    <div key={month} className="flex-1" title={`${shortMonth(month)}: ${count} ${count === 1 ? 'story' : 'stories'}`}>
+                    <div
+                      key={month}
+                      className="flex-1"
+                      title={`${shortMonth(month)}: ${count} ${count === 1 ? 'story' : 'stories'}`}
+                    >
                       <div
-                        className={count > 0 ? 'w-full rounded-t-[2px] bg-foreground/55' : 'w-full rounded-t-[2px] bg-border'}
+                        className={
+                          count > 0
+                            ? 'w-full rounded-t-[2px] bg-foreground/55'
+                            : 'w-full rounded-t-[2px] bg-border'
+                        }
                         style={{ height: `${count > 0 ? Math.max(5, (count / peak) * 44) : 2}px` }}
                       />
                     </div>
@@ -235,15 +267,15 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
 
         <Lane
           icon={<Megaphone className="size-3.5" />}
-          title="Ad libraries"
+          title="Manual lookup · Ad libraries"
           status={{ label: 'manual', variant: 'outline' }}
           footer={
             <p className="text-[10.5px] leading-snug text-muted-foreground">
-              No free official API for general US commercial ads. Open a library yourself; no scraping.
+              Search the public libraries directly. No ads are fetched.
             </p>
           }
         >
-          <NumberLine value={String(adLinks.length)} label="public libraries, pre-filled with the domain" />
+          <p>Search for {timeline.domain}</p>
           <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1">
             {adLinks.map((link) => (
               <a
@@ -264,10 +296,13 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
         <div className="mt-3 rounded-xl border border-border bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-              Public stories · evidence, not a score
+              Submitted links on Hacker News
             </p>
             <span className="text-[10.5px] text-muted-foreground">
-              Top {mentions.stories.length} by points{mentions.stories.length < mentions.total ? ` · ${mentions.stories.length} of ${mentions.total} shown` : ''}
+              Top {mentions.stories.length} by points
+              {mentions.stories.length < mentions.total
+                ? ` · ${mentions.stories.length} of ${mentions.total} shown`
+                : ''}
             </span>
           </div>
           <div className="mt-2 divide-y divide-border/70">
@@ -280,9 +315,12 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
                 className="flex items-start justify-between gap-3 py-2.5 transition-colors hover:bg-muted/20"
               >
                 <span className="min-w-0">
-                  <span className="block text-[12.5px] font-medium leading-snug">{story.title}</span>
+                  <span className="block text-[12.5px] font-medium leading-snug">
+                    {story.title}
+                  </span>
                   <span className="mt-0.5 block font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted-foreground">
-                    {story.createdAt.slice(0, 10)} · {story.points} points · {story.comments} comments
+                    {story.createdAt.slice(0, 10)} · {story.points} points · {story.comments}{' '}
+                    comments
                   </span>
                 </span>
                 <ExternalLink className="mt-1 size-3 shrink-0 text-muted-foreground" />
@@ -294,8 +332,8 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
 
       {failed ? (
         <p className="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground">
-          <CircleAlert className="size-3.5" /> The extra public-source check failed. The archive timeline
-          above is still usable; the other lanes are unread, not zero.
+          <CircleAlert className="size-3.5" /> The extra public-source check failed. The archive
+          timeline above is still usable; the other lanes are unread, not zero.
         </p>
       ) : null}
     </section>

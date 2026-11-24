@@ -1,4 +1,5 @@
 import { Bookmark, Check, Download, Link2, Loader2, Quote } from 'lucide-react'
+import { marketingBrief } from '../../shared/brief'
 import { toast } from 'sonner'
 import type { Timeline } from '../../shared/timeline'
 import { Badge } from '@/components/ui/badge'
@@ -28,11 +29,10 @@ export function ReportActions({ report, savedId, savedAt, saving, onSave }: Prop
   const slug = reportSlug(report)
 
   const copyLink = async () => {
-    if (!savedId) return
-    const url = `${window.location.origin}${window.location.pathname}${window.location.search}#report/${savedId}`
+    const url = window.location.href
     try {
       await navigator.clipboard.writeText(url)
-      toast.success('Saved link copied', { description: 'The frozen report is behind this link.' })
+      toast.success('Report link copied')
     } catch {
       toast.error('Could not copy the link', { description: url })
     }
@@ -53,50 +53,59 @@ export function ReportActions({ report, savedId, savedAt, saving, onSave }: Prop
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(marketingBrief(report).markdown)
+            toast.success('Brief copied')
+          } catch {
+            toast.error('Clipboard unavailable. Select and copy the brief instead.')
+          }
+        }}
+      >
+        Copy brief
+      </Button>
+      <Button variant="outline" size="sm" onClick={copyLink}>
+        <Link2 /> Copy link
+      </Button>
       {savedAt ? (
         <>
           <Badge variant="good">
             <Check /> Saved {savedLabel(savedAt)}
           </Badge>
-          <Button variant="outline" size="sm" onClick={copyLink}>
-            <Link2 /> Copy link
-          </Button>
-          <span className="hidden text-[11px] text-muted-foreground sm:inline">
-            Frozen copy · building again makes a new report
-          </span>
         </>
       ) : (
         <>
-          <Button size="sm" onClick={onSave} disabled={saving}>
+          <Button variant="outline" size="sm" onClick={onSave} disabled={saving}>
             {saving ? <Loader2 className="animate-spin" /> : <Bookmark />}
             {saving ? 'Saving…' : 'Save report'}
           </Button>
-          <span className="hidden text-[11px] text-muted-foreground sm:inline">
-            Stores a frozen server copy on this machine
-          </span>
         </>
       )}
 
-      <div className="ml-auto flex items-center gap-1.5">
-        <Button variant="ghost" size="sm" onClick={cite}>
-          <Quote /> Cite
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => downloadFile(`${slug}.csv`, 'text/csv', reportCsv(report))}
-        >
-          <Download /> CSV
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => downloadFile(`${slug}.json`, 'application/json', reportJson(report))}
-        >
-          <Download /> JSON
-        </Button>
-      </div>
+      <details className="exports">
+        <summary>Export or cite</summary>
+        <div className="flex flex-wrap items-center gap-2 py-2">
+          <Button variant="outline" size="sm" onClick={cite}>
+            <Quote /> Copy citation
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => downloadFile(`${slug}.csv`, 'text/csv', reportCsv(report))}
+          >
+            <Download /> Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => downloadFile(`${slug}.json`, 'application/json', reportJson(report))}
+          >
+            <Download /> Export JSON
+          </Button>
+        </div>
+      </details>
     </div>
   )
 }

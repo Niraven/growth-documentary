@@ -5,13 +5,13 @@
 
 **A dated, sourced record of what changed on a public page.**
 
-Paste a pricing page. Get a timeline of what changed on it, with the archived page behind every line. No estimates, no causal claims, no dashboard — just receipts you can quote.
+Paste a public pricing page to build a marketing brief. Compare dated headlines and monthly amounts, then copy the observations and their sources into your research notes.
 
 ```
 basecamp.com/pricing → 17 of 392 listed captures → 10 field changes → a link that proves each one
 ```
 
-![Growth Documentary showing a dated timeline for a pricing page](docs/screenshot.png)
+![Growth Documentary showing a dated timeline for a pricing page](docs/brief-v08/desktop-report.png)
 
 ## Why
 
@@ -39,17 +39,19 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 ## What a report contains
 
+**What moved.** The brief pairs the latest comparable headline and title changes with the first and latest comparable monthly ranges and the last readable capture. If the latest capture has no monthly amounts, the brief does not carry an old price forward. **Copy brief** exports the target, checked date, coverage, observations and dated links as Markdown. [Design and verification notes](docs/DESIGN.md).
+
 **Coverage.** The period the report actually covers, how many captures were read, how many the index listed, and a strip that marks every capture read and every day a change was found. Gaps are visible on purpose: the space between dots is unread, not unchanged.
 
-**Changes.** Consecutive readable captures are compared field by field. The first row is the baseline, not a change. Same-day field changes are grouped under one date.
+**Changes.** Consecutive readable captures are compared field by field. The earliest capture is the baseline, not a change. The log shows the newest observations first and can be filtered by field.
 
 **Compare.** Pick any two captures and see them side by side. The page title uses a character-level diff (`Basecamp: Pricing` → `Basecamp — Pricing`); the headline uses a word-level diff, and a wholesale replacement is shown as two whole states rather than an invented sentence. Price removals and additions are labelled, not encoded as negative numbers.
 
-![Compare two archived captures](docs/compare.png)
+![Compare two archived captures](docs/brief-v08/desktop-compare.png)
 
-**Monthly price range.** When at least two months contain monthly price strings, a small chart shows one bar per month: the lowest and highest monthly amount read that month. Annual, one-time and per-seat amounts are excluded; the caption says it is a range, not an index.
+**Monthly price range.** On desktop, each month with monthly price strings has one bar; on phones, select a month to read the exact amounts: the lowest and highest monthly amount read that month. Annual, one-time and per-seat amounts are excluded; the caption says it is a range, not an index.
 
-![Monthly price range per capture month](docs/price-range.png)
+![Monthly price range per capture month](docs/brief-v08/desktop-charts.png)
 
 **Citation.** One button copies a ready-to-paste citation with the coverage window, captures read, field changes, access date and source link.
 
@@ -57,9 +59,9 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 **Change matrix.** A second, smaller chart places the field observations on a calendar grid: rows are page title, headline and price string; columns are calendar months. Empty months stay visible. The baseline is never counted as a change. It is a shape of the record, not a trend line.
 
-![Change matrix of page title, headline and price observations by month](docs/change-matrix.png)
+![Change matrix of page title, headline and price observations by month](docs/brief-v08/mobile-matrix.png)
 
-**Evidence lanes.** Below the page evidence, four public lanes are checked separately:
+**Sources.** Only Internet Archive captures supply dated changes. The other sources are context or manual lookup:
 
 | Lane | What it adds | What it does not do |
 |---|---|---|
@@ -68,9 +70,9 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 | [Hacker News](https://news.ycombinator.com/) | public stories whose submitted URL points at the host, with links | does not count name mentions, comments or all discussion |
 | Ad libraries | four manual, pre-filled public libraries | does not scrape or claim spend |
 
-Each lane shows **read**, **no rows** or **unread**; a pending check says **reading**. An unavailable provider is never drawn as zero. The lanes are checked when the report is opened; a successful read may be cached briefly. Only the Internet Archive captures inside the frozen report are saved. Design notes: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
+Each automatic source shows **read**, **no rows** or **unread**; a pending check says **reading**. An unavailable provider is never drawn as zero. The lanes are checked when the report is opened; a successful read may be cached briefly. Only the Internet Archive captures inside the frozen report are saved. Design notes: [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 
-![Evidence lanes with archive coverage, Hacker News stories and manual ad libraries](docs/evidence-lanes.png)
+![Evidence lanes with archive coverage, Hacker News stories and manual ad libraries](docs/brief-v08/desktop-evidence.png)
 
 For each capture it extracts three things:
 

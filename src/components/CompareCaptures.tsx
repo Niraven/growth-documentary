@@ -110,7 +110,7 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
   const [toIndex, setToIndex] = useState(Math.max(0, captures.length - 1))
   const reduce = useReducedMotion()
 
-  if (captures.length < 2) return null
+  if (captures.length < 2) return <p>Comparing dates takes two readable captures. This report has fewer than two.</p>
 
   const before = captures[fromIndex] ?? captures[0]
   const after = captures[toIndex] ?? captures[captures.length - 1]
@@ -132,9 +132,7 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <GitCompareArrows className="size-4 text-muted-foreground" />
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              Compare captures
-            </p>
+            <h2 className="section-title">Compare captures</h2>
           </div>
           <Badge variant={comparison.changed ? 'good' : 'outline'}>
             {comparison.changed

@@ -1,6 +1,10 @@
-import { Suspense, lazy } from 'react'
-import { ExternalLink, FileSearch, Loader2 } from 'lucide-react'
-import type { Change as LiveChange, Capture as LiveCapture, Timeline as LiveData } from '../../shared/timeline'
+import { Suspense, lazy, useState } from 'react'
+import { ExternalLink, Loader2 } from 'lucide-react'
+import type {
+  Change as LiveChange,
+  Capture as LiveCapture,
+  Timeline as LiveData,
+} from '../../shared/timeline'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CoverageStrip } from '@/components/CoverageStrip'
@@ -9,9 +13,6 @@ import { ChangeMatrix } from '@/components/ChangeMatrix'
 
 const PriceTrail = lazy(() =>
   import('@/components/PriceTrail').then((module) => ({ default: module.PriceTrail })),
-)
-const AdLibraryPanel = lazy(() =>
-  import('@/components/AdLibraryPanel').then((module) => ({ default: module.AdLibraryPanel })),
 )
 const SourcesBoard = lazy(() =>
   import('@/components/SourcesBoard').then((module) => ({ default: module.SourcesBoard })),
@@ -25,16 +26,6 @@ const fieldLabel: Record<LiveChange['field'], string> = {
   price: 'Price string',
   'first capture': 'Baseline',
 }
-
-const formatChecked = (iso: string): string =>
-  new Date(iso).toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZoneName: 'short',
-  })
 
 export function LiveLoading({ domain }: { domain: string }) {
   return (
@@ -86,7 +77,7 @@ function ChangeRow({ change }: { change: LiveChange }) {
           href={change.url}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground"
+          className="ml-auto inline-flex min-h-11 items-center gap-1 text-[12px] font-medium text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground"
         >
           Open capture
           <ExternalLink className="size-3" />
@@ -119,56 +110,32 @@ function ChangeRow({ change }: { change: LiveChange }) {
   )
 }
 
-export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string | null }) {
+export function LiveReport({ data }: { data: LiveData }) {
   const changeCount = Math.max(0, data.changes.length - 1)
-  const groups = groupChanges(data.changes)
-  const first = data.captures[0]
-  const last = data.captures[data.captures.length - 1]
-
+  const [field, setField] = useState('all')
+  const groups = groupChanges(
+    [...data.changes].reverse().filter((row) => field === 'all' || row.field === field),
+  )
   return (
-    <section aria-labelledby="live" className="mb-14">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
-        <div className="min-w-0">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">
-            {savedAt ? 'Saved report' : 'Live report'} · checked {formatChecked(data.checkedAt)}
-          </p>
-          <h2 id="live" className="mt-2 break-words font-display text-3xl tracking-[-0.02em]">
-            {data.domain}
-            <span className="text-muted-foreground">{data.path}</span>
-          </h2>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">
-            {data.coverage.sampled} of {data.coverage.available} listed
-          </Badge>
-          <Badge variant={changeCount > 0 ? 'good' : 'outline'}>{changeCount} field changes</Badge>
-          <Badge variant="outline">{data.coverage.months} months</Badge>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">
-            Coverage
-          </p>
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            How this was sampled
-          </p>
-        </div>
+    <section
+      id="evidence"
+      tabIndex={-1}
+      aria-labelledby="evidence-title"
+      className="report-section"
+    >
+      <h2 id="evidence-title">Archive evidence</h2>
+      <div className="mt-4 border-y border-border py-4">
+        <h3>When the page was read</h3>
         <div className="mt-3">
           <CoverageStrip captures={data.captures} changes={data.changes} />
         </div>
         <p className="mt-3 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground">
-          Read {data.coverage.sampled} of the {data.coverage.available} snapshots the index listed,
-          across {data.coverage.months} months: spaced evenly first, then extra reads around the
-          captures where a change appeared. Ticks mark days with at least one field change, so
-          there are fewer ticks than rows. The index is capped at 400 snapshots, so the space
-          between dots is unread — not unchanged.
+          Captures are sampled from up to 400 index entries. Gaps are unread, not unchanged.
         </p>
-        <Suspense fallback={null}>
-          <PriceTrail captures={data.captures} changes={data.changes} />
-        </Suspense>
       </div>
+      <Suspense fallback={null}>
+        <PriceTrail captures={data.captures} changes={data.changes} />
+      </Suspense>
 
       <div className="mt-4">
         <ChangeMatrix captures={data.captures} changes={data.changes} />
@@ -178,6 +145,25 @@ export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string
         <SourcesBoard key={`${data.domain}${data.path}`} timeline={data} />
       </Suspense>
 
+      <div className="mt-12 flex flex-wrap items-end justify-between gap-4">
+        <h2 id="changes" tabIndex={-1}>
+          Dated changes
+        </h2>
+        <label className="flex items-center gap-3 text-sm">
+          Show field
+          <select
+            className="min-h-11 rounded-lg border bg-card px-3"
+            value={field}
+            onChange={(e) => setField(e.target.value)}
+          >
+            <option value="all">All fields</option>
+            <option value="headline">Headline</option>
+            <option value="price">Price strings</option>
+            <option value="title">Page title</option>
+          </select>
+        </label>
+      </div>
+      {field !== 'all' && groups.length === 0 && <p>No comparable change in this field.</p>}
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div>
           {changeCount === 0 && (
@@ -192,7 +178,11 @@ export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string
           )}
 
           {groups.map((group) => (
-            <section key={group.year} aria-label={`Changes in ${group.year}`} className="mb-6 last:mb-0">
+            <section
+              key={group.year}
+              aria-label={`Changes in ${group.year}`}
+              className="mb-6 last:mb-0"
+            >
               <div className="mb-1 flex items-center gap-3">
                 <h3 className="font-mono text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
                   {group.year}
@@ -222,14 +212,10 @@ export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <SiteGrowth key={`${data.domain}${data.path}`} target={`${data.domain}${data.path}`} />
-          <Suspense fallback={null}>
-            <AdLibraryPanel domain={data.domain} />
-          </Suspense>
-
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">
-                What this does not prove
+                What this cannot prove
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-[12px] leading-relaxed text-muted-foreground">
@@ -240,18 +226,6 @@ export function LiveReport({ data, savedAt }: { data: LiveData; savedAt?: string
             </CardContent>
           </Card>
         </aside>
-      </div>
-
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
-        <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-          <FileSearch className="size-4" />
-          Extracted from archived HTML: page title, first H1, price strings. Not a visual diff.
-        </div>
-        {first && last && (
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
-            {first.label} — {last.label}
-          </span>
-        )}
       </div>
     </section>
   )

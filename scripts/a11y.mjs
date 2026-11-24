@@ -15,6 +15,11 @@ const browser = await puppeteer.launch({
 })
 const page = await browser.newPage()
 await page.goto(url, { waitUntil: 'networkidle2', timeout: 60_000 })
+if (new URL(url).searchParams.has('url') || new URL(url).hash.startsWith('#report/')) {
+  await page.waitForSelector('#brief', { timeout: 120_000 })
+  await page.waitForSelector('[data-testid="sources-board"]')
+  await page.waitForFunction(() => ![...document.querySelectorAll('[data-testid="sources-board"] [data-slot="badge"]')].some(el => el.textContent === 'reading'))
+}
 await page.evaluate(axeSource)
 const results = await page.evaluate(async () => {
   // @ts-expect-error injected at runtime
@@ -33,4 +38,4 @@ const violations = results.violations.map((v) => ({
 const serious = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
 
 console.log(JSON.stringify({ url, total: violations.length, serious: serious.length, violations }, null, 2))
-process.exit(serious.length > 0 ? 1 : 0)
+process.exit(violations.length > 0 ? 1 : 0)

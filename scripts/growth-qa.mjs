@@ -55,6 +55,9 @@ try {
 
     await page.evaluate(() => scrollTo(0, 0))
     await page.screenshot({ path: `${out}/${name}-growth.png` })
+    await page.$eval('#context', (el) => el.scrollIntoView({ block: 'start' }))
+    await page.evaluate(() => document.fonts.ready)
+    await page.screenshot({ path: `${out}/${name}-context.png` })
     console.log(
       JSON.stringify({
         name,

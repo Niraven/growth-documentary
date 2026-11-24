@@ -8,10 +8,15 @@
 
 import type { SiteInfo, Timeline } from './timeline.js'
 import type { SourcesReport } from './sources.js'
+import type { FeedSignal } from './signals.js'
 
-export type GrowthEventType = 'page change' | 'site expansion' | 'public signal'
-export type GrowthEventSource = 'Internet Archive' | 'Archived sitemap' | 'Hacker News'
-export type GrowthEvidence = 'dated capture' | 'self-reported' | 'public post'
+export type GrowthEventType = 'page change' | 'site expansion' | 'public signal' | 'release'
+export type GrowthEventSource =
+  | 'Internet Archive'
+  | 'Archived sitemap'
+  | 'Hacker News'
+  | 'Public feed'
+export type GrowthEvidence = 'dated capture' | 'self-reported' | 'public post' | 'published feed'
 
 export type GrowthEvent = {
   id: string
@@ -38,8 +43,14 @@ export type GrowthTimeline = {
   period: { from: string; to: string; months: number }
   coverage: { sampled: number; listed: number; strategy: 'adaptive' }
   events: GrowthEvent[]
-  counts: { pageChanges: number; siteAdditions: number; publicSignals: number }
-  sources: { page: boolean; site: boolean; publicSignals: boolean; ads: 'manual' }
+  counts: { pageChanges: number; siteAdditions: number; publicSignals: number; releases: number }
+  sources: {
+    page: boolean
+    site: boolean
+    publicSignals: boolean
+    feeds: boolean
+    ads: 'manual'
+  }
   caveats: string[]
   checkedAt: string
 }
@@ -73,6 +84,7 @@ export function buildGrowthTimeline(
   report: Timeline,
   site: SiteInfo | null = null,
   sources: SourcesReport | null = null,
+  feeds: FeedSignal | null = null,
 ): GrowthTimeline {
   const events: GrowthEvent[] = []
 
@@ -147,11 +159,34 @@ export function buildGrowthTimeline(
   }
   events.push(...launchEvents)
 
+  const releaseEvents: GrowthEvent[] = []
+  if (feeds?.status === 'read') {
+    for (const entry of feeds.entries) {
+      if (!entry.publishedAt) continue
+      const date = entry.publishedAt.slice(0, 10)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
+      releaseEvents.push({
+        id: `release:${entry.url}:${date}`,
+        date,
+        label: dayLabel(date),
+        type: 'release',
+        title: entry.title,
+        detail: entry.summary || 'Release entry published by the site.',
+        source: 'Public feed',
+        sourceUrl: entry.url,
+        evidence: 'published feed',
+        note: 'Published by the site’s own feed; the date is the feed entry’s published date.',
+      })
+    }
+  }
+  events.push(...releaseEvents)
+
   events.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
 
   const siteAdditions = site?.months.reduce((sum, month) => sum + month.added, 0) ?? 0
   const publicSignals = launchEvents.length
-  const pageChanges = events.length - siteEvents.length - launchEvents.length
+  const releases = releaseEvents.length
+  const pageChanges = events.length - siteEvents.length - launchEvents.length - releaseEvents.length
   const lists = `${report.coverage.sampled} of ${report.coverage.available}`
 
   const caveats = [
@@ -162,6 +197,9 @@ export function buildGrowthTimeline(
     sources?.mentions.status === 'read'
       ? `Hacker News shows ${publicSignals} of ${sources.mentions.total} matched stories. It counts submitted links, not every discussion.`
       : 'Hacker News is unread or empty. That is not proof of zero public signals.',
+    feeds?.status === 'read'
+      ? `Public feed shows ${releases} dated release entr${releases === 1 ? 'y' : 'ies'}. A missing feed is unread, not a quiet period.`
+      : 'No public release feed was read; release cadence is unknown.',
     'Ad libraries remain manual outbound lookups. No ad start date, spend or ROAS is in this timeline.',
     'No revenue, traffic, conversion, ROAS or causal claim is made anywhere in this report.',
   ]
@@ -180,11 +218,12 @@ export function buildGrowthTimeline(
       strategy: report.coverage.strategy,
     },
     events,
-    counts: { pageChanges, siteAdditions, publicSignals },
+    counts: { pageChanges, siteAdditions, publicSignals, releases },
     sources: {
       page: report.changes.length > 0,
       site: Boolean(site?.sitemapUrl),
       publicSignals: sources?.mentions.status === 'read',
+      feeds: feeds?.status === 'read',
       ads: 'manual',
     },
     caveats,
@@ -203,7 +242,7 @@ export function growthMarkdown(timeline: GrowthTimeline): string {
       ` (${timeline.period.months} months)`,
     `Coverage: ${timeline.coverage.sampled} of ${timeline.coverage.listed} listed captures sampled`,
     `Events: ${timeline.events.length} (${timeline.counts.pageChanges} page changes, ` +
-      `${timeline.counts.siteAdditions} site additions, ${timeline.counts.publicSignals} public signals)`,
+      `${timeline.counts.siteAdditions} site additions, ${timeline.counts.publicSignals} public signals, ${timeline.counts.releases} releases)`,
     '',
   ]
   const body = timeline.events.map(
@@ -225,13 +264,24 @@ const isString = (value: unknown): value is string => typeof value === 'string'
 const isNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
 
-const TYPES: ReadonlySet<string> = new Set(['page change', 'site expansion', 'public signal'])
+const TYPES: ReadonlySet<string> = new Set([
+  'page change',
+  'site expansion',
+  'public signal',
+  'release',
+])
 const SOURCES: ReadonlySet<string> = new Set([
   'Internet Archive',
   'Archived sitemap',
   'Hacker News',
+  'Public feed',
 ])
-const EVIDENCE: ReadonlySet<string> = new Set(['dated capture', 'self-reported', 'public post'])
+const EVIDENCE: ReadonlySet<string> = new Set([
+  'dated capture',
+  'self-reported',
+  'public post',
+  'published feed',
+])
 
 const isGrowthEvent = (value: unknown): value is GrowthEvent =>
   isRecord(value) &&
@@ -272,10 +322,12 @@ export function isGrowthTimeline(value: unknown): value is GrowthTimeline {
     isNumber(value.counts.pageChanges) &&
     isNumber(value.counts.siteAdditions) &&
     isNumber(value.counts.publicSignals) &&
+    isNumber(value.counts.releases) &&
     isRecord(value.sources) &&
     typeof value.sources.page === 'boolean' &&
     typeof value.sources.site === 'boolean' &&
     typeof value.sources.publicSignals === 'boolean' &&
+    typeof value.sources.feeds === 'boolean' &&
     value.sources.ads === 'manual' &&
     Array.isArray(value.caveats) &&
     value.caveats.every(isString) &&

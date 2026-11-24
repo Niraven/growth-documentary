@@ -32,7 +32,7 @@ function DiffSide({
         {parts.map((part, index) => (
           <span key={`${part.kind}-${index}-${part.text}`}>
             {part.kind === 'removed' ? (
-              <del className="rounded-[2px] bg-destructive/10 text-foreground/80 decoration-destructive decoration-2">
+              <del className="rounded-[2px] bg-destructive/10 text-foreground decoration-destructive decoration-2">
                 {part.text}
               </del>
             ) : part.kind === 'added' ? (
@@ -212,7 +212,7 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
             ) : (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2 text-[10.5px] text-muted-foreground">
-                  <del className="rounded-[2px] bg-destructive/10 px-1 text-foreground/80 decoration-destructive decoration-2">
+                  <del className="rounded-[2px] bg-destructive/10 px-1 text-foreground decoration-destructive decoration-2">
                     removed text
                   </del>
                   <ins className="rounded-[2px] bg-foreground/10 px-1 font-medium text-foreground no-underline">
@@ -248,10 +248,10 @@ export function CompareCaptures({ captures }: { captures: Capture[] }) {
                         {comparison.price.removed.map((price) => (
                           <span
                             key={`removed-${price}`}
-                            className="inline-flex items-baseline gap-1.5 rounded-md border border-border bg-muted px-2 py-0.5 text-[10.5px] text-muted-foreground"
+                            className="inline-flex items-baseline gap-1.5 rounded-md border border-border bg-muted px-2 py-0.5 text-[10.5px] text-foreground"
                           >
                             Removed
-                            <span className="rounded-[2px] bg-destructive/10 font-mono text-[11.5px] line-through decoration-destructive decoration-2">
+                            <span className="rounded-[2px] bg-destructive/10 font-mono text-[11.5px] text-foreground line-through decoration-destructive decoration-2">
                               {price}
                             </span>
                           </span>

@@ -4,6 +4,63 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] — 2026-11-24
+
+The public-data build: more sources, a bounded site graph, a coverage gate, a
+chaptered timeline and a safe first-party boundary.
+
+### Added
+
+- **Bounded site graph** — `GET /api/sitegraph?url=` reads robots/sitemap
+  discovery and same-origin public pages (max 40) and classifies page types.
+  Private addresses, cross-origin links and missing sitemaps are explicit.
+- **Release feed lane** — `GET /api/signals?url=` reads up to two same-origin
+  RSS/Atom feeds and returns dated entries. Dated entries merge into
+  `GET /api/growth` as `release` events.
+- **Public ATS snapshot** — the same signals endpoint detects Greenhouse, Lever
+  and Ashby boards and returns current open roles. It is a snapshot, not
+  historical hiring.
+- **Chapters** — events are grouped by month with a neutral signal mix; gaps
+  between chapters are listed as unread months, not invented events.
+- **Coverage gate** — `multi-source`, `limited` or `thin`, with named source
+  lanes, sampled percentage and caveats. A thin report refuses a confident
+  narrative.
+- **First-party CSV outcomes** — local-only `date,metric,value` import with
+  parsing, duplicate/error reporting and a preview table. Nothing is uploaded or
+  joined automatically.
+- **Glyph landing background** — the supplied 21st.dev `GlyphBackground` from
+  `@animate-ui/react`, rendered behind the landing hero at low opacity with a
+  static fallback for reduced motion.
+- **More tests and QA** — site-graph, feed/job, chapter/gap, coverage and outcome
+  tests. `scripts/growth-qa.mjs` now covers the merged timeline.
+
+### Changed
+
+- `GET /api/growth` merges page, sitemap, HN and release events. Each event has a
+  source URL and evidence label; counts distinguish dated events from pages
+  dated by the sitemap.
+- The report adds a **Context** section for the current site surface and hiring
+  snapshot, and an **Outcomes** disclosure for local CSV data.
+- The report nav wraps into pills on mobile and shows the active section.
+
+### Evidence
+
+- **245 tests across 22 files**; lint, test, build and the real Basecamp QA pass.
+- Real Basecamp: `/api/growth` returns 18 events (10 page changes, 2 site months
+  covering 171 sitemap-dated pages, 6 HN links); the release feed is unavailable,
+  so releases are marked unread rather than zero. `/api/sitegraph` reads 40 of
+  395 discovered pages; `/api/signals` reports no supported job board without
+  inventing zero open roles.
+- axe 0 at desktop 1280 and mobile 390 on the growth report and landing.
+
+### Limits
+
+- Site graph is capped at 40 pages; it is not a full crawl.
+- Site expansion is self-reported; feeds/jobs can be absent; jobs are current.
+- No licensed ad connector, no Product Hunt/press adapter, no auth/hosted
+  multi-user store, no first-party OAuth. CSV outcomes are local-only.
+- No revenue, traffic, conversion, ROAS or causal claim is made.
+
 ## [0.10.1] — 2026-11-24
 
 A clean patch for the growth timeline release.
@@ -484,6 +541,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.11.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.11.0
 [0.10.1]: https://github.com/Niraven/growth-documentary/releases/tag/v0.10.1
 [0.10.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.10.0
 [0.9.1]: https://github.com/Niraven/growth-documentary/releases/tag/v0.9.1

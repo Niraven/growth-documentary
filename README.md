@@ -39,7 +39,13 @@ Requirements: Node 22.12+ and `pnpm`. No API keys, no database, no account.
 
 ## What the growth timeline contains
 
-**The timeline.** The default view merges dated signals from independent public sources: page changes from the Internet Archive, site expansion from the site’s archived sitemap, and public signals from Hacker News. Every event has a source link and an evidence label. Filter by lane; a missing lane says unread, never zero. **Copy timeline** exports the merged record, coverage and links as Markdown.
+**The timeline.** The default view merges dated signals from independent public sources: page changes from the Internet Archive, site expansion from the site’s archived sitemap, public signals from Hacker News, and dated release entries from the site’s public feed. Every event has a source link and an evidence label. Filter by lane; a missing lane says unread, never zero. **Copy timeline** exports the merged record, coverage and links as Markdown.
+
+**Coverage gate.** A conservative badge says whether the run is `multi-source`, `limited`, or `thin`. It shows the sampled percentage, named lanes and the exact sample (`17 of 392`). A thin run refuses to present a confident narrative.
+
+**Context.** A bounded same-origin **site surface** read groups public pages by type; a public **hiring snapshot** reads Greenhouse/Lever/Ashby boards. Both are current snapshots, not historical series. Neither is a growth metric.
+
+**First-party outcomes.** Paste a `date,metric,value` CSV from your own analytics, CRM or billing export. It stays in the browser, is never uploaded and is not joined to public events automatically. It is a local display, not causal proof.
 
 **The narrative.** Below the timeline, a short three-act reading of the same record: the opening capture, dated chapters of change, and the closing capture. It is one reading, not a separate data set.
 
@@ -163,6 +169,8 @@ GET    /api
 GET    /api/growth?url=stripe.com/pricing
 GET    /api/timeline?url=stripe.com/pricing
 GET    /api/site?url=stripe.com/pricing
+GET    /api/sitegraph?url=stripe.com/pricing
+GET    /api/signals?url=stripe.com/pricing
 GET    /api/sources?url=stripe.com/pricing
 GET    /api/live?url=stripe.com/pricing
 GET    /api/reports
@@ -324,9 +332,9 @@ Source matrix, planned adapters and the inclusion rule for adding a source: [`do
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 215 unit tests (vitest) |
+| `pnpm test` | 245 unit tests (vitest) |
 | `pnpm lint` | oxlint |
-| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.10.1) |
+| `pnpm a11y` | axe-core scan of a running build (0 violations at v0.11.0) |
 | `pnpm check` | lint + test + build |
 
 ## Self-hosting

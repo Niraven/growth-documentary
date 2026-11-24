@@ -10,29 +10,32 @@ import {
   type GrowthEvent,
   type GrowthTimeline,
 } from '../../shared/growth'
-import { chapterize } from '../../shared/chapters'
+import { chapterize, missingMonths } from '../../shared/chapters'
 import { assessCoverage } from '../../shared/coverage'
 import type { Timeline } from '../../shared/timeline'
 
-type Filter = 'all' | 'page' | 'site' | 'launch'
+type Filter = 'all' | 'page' | 'site' | 'launch' | 'release'
 
 const filterLabel: Record<Filter, string> = {
   all: 'All signals',
   page: 'Page changes',
   site: 'Site expansion',
   launch: 'Public signals',
+  release: 'Releases',
 }
 
 const typeLabel: Record<GrowthEvent['type'], string> = {
   'page change': 'Page change',
   'site expansion': 'Site expansion',
   'public signal': 'Public signal',
+  release: 'Release',
 }
 
 const typeFilter: Record<GrowthEvent['type'], Filter> = {
   'page change': 'page',
   'site expansion': 'site',
   'public signal': 'launch',
+  release: 'release',
 }
 
 function EventRow({ event }: { event: GrowthEvent }) {
@@ -146,10 +149,26 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
     pageHistory: current.sources.page,
     siteMap: current.sources.site,
     publicSignals: current.sources.publicSignals,
+    feeds: current.sources.feeds,
     sampled: current.coverage.sampled,
     listed: current.coverage.listed,
   })
   const caveats = [...new Set([...current.caveats, ...coverage.caveats])]
+  const sourceNames = [
+    growth?.sources.page ? 'page' : null,
+    growth?.sources.site ? 'sitemap' : null,
+    growth?.sources.publicSignals ? 'HN' : null,
+    growth?.sources.feeds ? 'feed' : null,
+  ].filter(Boolean)
+  const samplePercent = coverage.counts.listed
+    ? Math.round((coverage.counts.sampled / coverage.counts.listed) * 100)
+    : 0
+  const unsampled = Math.max(0, coverage.counts.listed - coverage.counts.sampled)
+  const releasesLabel = growth?.sources.feeds
+    ? `${growth.counts.releases} releases`
+    : 'releases unread'
+  const siteEventCount = growth?.events.filter((event) => event.type === 'site expansion').length ?? 0
+  const missing = growth ? missingMonths(growth.events, growth.period.from, growth.period.to) : []
 
   const copy = async () => {
     setCopying(true)
@@ -177,7 +196,7 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
               <>
                 <Badge
                   variant={
-                    coverage.level === 'strong'
+                    coverage.level === 'multi-source'
                       ? 'good'
                       : coverage.level === 'thin'
                         ? 'warn'
@@ -187,8 +206,9 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
                   {coverage.level} public record
                 </Badge>
                 <span className="text-[11px] text-muted-foreground">
-                  {coverage.sourceCount} source famil{coverage.sourceCount === 1 ? 'y' : 'ies'} ·{' '}
-                  {coverage.counts.sampled} of {coverage.counts.listed} captures sampled
+                  {sourceNames.join(', ')} · {coverage.counts.sampled} of{' '}
+                  {coverage.counts.listed} captures ({samplePercent}%)
+                  {unsampled > 0 ? ` · ${unsampled} listed captures not sampled` : ''}
                 </span>
               </>
             ) : (
@@ -210,7 +230,7 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
 
       <p className="mt-4 font-mono text-[10.5px] uppercase leading-relaxed tracking-[0.12em] text-muted-foreground">
         {growth
-          ? `${growth.events.length} signals · ${growth.counts.pageChanges} page changes · ${growth.counts.siteAdditions} sitemap-dated pages · ${growth.counts.publicSignals} HN links`
+          ? `${growth.events.length} dated events · ${growth.counts.pageChanges} page changes · ${siteEventCount} site-expansion month${siteEventCount === 1 ? '' : 's'} (${growth.counts.siteAdditions} pages dated) · ${growth.counts.publicSignals} HN links · ${releasesLabel}`
           : `${current.counts.pageChanges} page changes · site and public lanes ${
               failed ? 'unread' : 'reading'
             }`}
@@ -271,6 +291,13 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
           ))
         )}
       </div>
+
+      {missing.length > 0 && (
+        <p className="mt-4 rounded-lg border border-dashed border-border px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+          No dated event in {missing.slice(0, 8).join(', ')}
+          {missing.length > 8 ? ` and ${missing.length - 8} more month${missing.length - 8 === 1 ? '' : 's'}` : ''}. Gaps are unread, not unchanged.
+        </p>
+      )}
 
       <details className="mt-5 border-t border-border pt-3">
         <summary className="cursor-pointer text-[12px] font-medium text-muted-foreground">

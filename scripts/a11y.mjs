@@ -14,7 +14,9 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1280, height: 1000 },
 })
 const page = await browser.newPage()
-await page.goto(url, { waitUntil: 'networkidle2', timeout: 60_000 })
+await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 })
+await page.waitForSelector('main', { timeout: 30_000 })
+await page.evaluate(() => document.fonts.ready)
 if (new URL(url).searchParams.has('url') || new URL(url).hash.startsWith('#report/')) {
   await page.waitForSelector('#growth', { timeout: 120_000 })
   await page.waitForSelector('#documentary', { timeout: 120_000 })

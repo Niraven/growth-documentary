@@ -25,7 +25,7 @@ export type CoverageInput = {
 }
 
 export type CoverageAssessment = {
-  level: 'strong' | 'partial' | 'thin'
+  level: 'multi-source' | 'limited' | 'thin'
   sourceCount: number
   sources: {
     pageHistory: boolean
@@ -64,11 +64,12 @@ export function assessCoverage(input: CoverageInput): CoverageAssessment {
   const contextLanes = [sources.siteMap, sources.publicSignals, sources.feeds, sources.jobs].filter(
     Boolean,
   ).length
+  const sampleRatio = listed > 0 ? sampled / listed : 0
   const level: CoverageAssessment['level'] =
-    sources.pageHistory && sampled >= 8 && contextLanes >= 2
-      ? 'strong'
+    sources.pageHistory && sampled >= 8 && sampleRatio >= 0.1 && contextLanes >= 2
+      ? 'multi-source'
       : sources.pageHistory
-        ? 'partial'
+        ? 'limited'
         : 'thin'
 
   const caveats = [

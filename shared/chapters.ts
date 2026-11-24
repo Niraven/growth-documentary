@@ -11,7 +11,12 @@ export type GrowthChapter = {
   id: string
   label: string
   events: GrowthEvent[]
-  counts: { pageChanges: number; siteExpansions: number; publicSignals: number }
+  counts: {
+    pageChanges: number
+    siteExpansions: number
+    publicSignals: number
+    releases: number
+  }
   /** A neutral description of the signal mix, e.g. "Pricing and site expansion". */
   title: string
 }
@@ -28,6 +33,7 @@ const chapterTitle = (counts: GrowthChapter['counts']): string => {
   if (counts.pageChanges > 0) parts.push('Page changes')
   if (counts.siteExpansions > 0) parts.push('Site expansion')
   if (counts.publicSignals > 0) parts.push('Public signals')
+  if (counts.releases > 0) parts.push('Releases')
   return parts.join(' and ')
 }
 
@@ -52,6 +58,7 @@ export function chapterize(events: GrowthEvent[]): GrowthChapter[] {
         pageChanges: rows.filter((event) => event.type === 'page change').length,
         siteExpansions: rows.filter((event) => event.type === 'site expansion').length,
         publicSignals: rows.filter((event) => event.type === 'public signal').length,
+        releases: rows.filter((event) => event.type === 'release').length,
       }
       return {
         id,
@@ -61,4 +68,29 @@ export function chapterize(events: GrowthEvent[]): GrowthChapter[] {
         title: chapterTitle(counts),
       }
     })
+}
+
+const tsMonth = (ts: string): string => `${ts.slice(0, 4)}-${ts.slice(4, 6)}`
+
+/** Calendar months between two Wayback timestamps with no dated event. */
+export function missingMonths(events: GrowthEvent[], from: string, to: string): string[] {
+  if (!/^\d{8}/.test(from) || !/^\d{8}/.test(to)) return []
+  const present = new Set(events.map((event) => event.date.slice(0, 7)))
+  const start = tsMonth(from)
+  const end = tsMonth(to)
+  const [startYear, startMonth] = start.split('-').map(Number)
+  const [endYear, endMonth] = end.split('-').map(Number)
+  const months: string[] = []
+  let year = startYear
+  let month = startMonth
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    const key = `${year}-${String(month).padStart(2, '0')}`
+    if (!present.has(key)) months.push(key)
+    month += 1
+    if (month > 12) {
+      month = 1
+      year += 1
+    }
+  }
+  return months
 }

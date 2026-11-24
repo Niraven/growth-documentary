@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chapterize } from '../shared/chapters'
+import { chapterize, missingMonths } from '../shared/chapters'
 import { assessCoverage } from '../shared/coverage'
 import { parseOutcomeCsv } from '../shared/outcomes'
 import type { GrowthEvent } from '../shared/growth'
@@ -36,13 +36,27 @@ describe('growth chapters', () => {
       event('c', '2026-08-01', 'site expansion', 'Site grew'),
     ])
     expect(chapters.map((chapter) => chapter.id)).toEqual(['2026-10', '2026-08'])
-    expect(chapters[0].counts).toEqual({ pageChanges: 1, siteExpansions: 0, publicSignals: 1 })
+    expect(chapters[0].counts).toEqual({
+      pageChanges: 1,
+      siteExpansions: 0,
+      publicSignals: 1,
+      releases: 0,
+    })
     expect(chapters[0].title).toBe('Page changes and Public signals')
     expect(chapters[0].events.map((row) => row.id)).toEqual(['a', 'b'])
   })
 
   it('returns no chapters for an empty timeline', () => {
     expect(chapterize([])).toEqual([])
+  })
+
+  it('lists calendar months with no dated event and does not invent rows', () => {
+    const gaps = missingMonths(
+      [event('a', '2026-10-24', 'page change', 'Price changed')],
+      '20260801000000',
+      '20261031000000',
+    )
+    expect(gaps).toEqual(['2026-08', '2026-09'])
   })
 })
 
@@ -68,24 +82,24 @@ describe('coverage gate', () => {
       sampled: 17,
       listed: 392,
     })
-    expect(coverage.level).toBe('partial')
+    expect(coverage.level).toBe('limited')
     expect(coverage.sourceCount).toBe(1)
     expect(coverage.canNarrate).toBe(true)
   })
 
-  it('is strong only with a meaningful sample and two context lanes', () => {
+  it('is multi-source only with a meaningful sample and two context lanes', () => {
     const coverage = assessCoverage({
       pageHistory: true,
       siteMap: true,
       publicSignals: true,
-      sampled: 17,
-      listed: 392,
+      sampled: 40,
+      listed: 300,
       openRoles: 12,
     })
-    expect(coverage.level).toBe('strong')
+    expect(coverage.level).toBe('multi-source')
     expect(coverage.sources.siteMap).toBe(true)
     expect(coverage.counts.openRoles).toBe(0)
-    expect(coverage.caveats.join(' ')).toContain('17 of 392')
+    expect(coverage.caveats.join(' ')).toContain('40 of 300')
   })
 
   it('does not call a first-party CSV public evidence', () => {
@@ -97,7 +111,7 @@ describe('coverage gate', () => {
       listed: 2,
       firstParty: true,
     })
-    expect(coverage.level).toBe('partial')
+    expect(coverage.level).toBe('limited')
     expect(coverage.caveats.join(' ')).toContain('user-supplied and local')
   })
 })

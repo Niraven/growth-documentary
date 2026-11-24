@@ -1,6 +1,6 @@
 # Product spec — Growth Documentary
 
-Status: implemented (v0.10.1). This file is the contract; the README explains usage.
+Status: implemented (v0.11.0). This file is the contract; the README explains usage.
 
 ## Problem
 
@@ -35,7 +35,13 @@ When I need to understand how a competitor’s public growth changed, I want one
 
 `{ target, period, coverage, events, counts, sources, caveats, checkedAt }`.
 
-Each `GrowthEvent` has `id`, `date`, `label`, `type` (`page change`, `site expansion`, `public signal`), `title`, `detail`, `source`, `sourceUrl`, `evidence` (`dated capture`, `self-reported`, `public post`) and `note`. Page-change events also carry `before`, `after`, `beforeUrl` and `afterUrl` when readable. Events are newest-first. A missing site or public lane produces no event and an explicit caveat; it is never zero-filled. The endpoint composes the existing timeline, site and source builders; it does not add a second crawler.
+Each `GrowthEvent` has `id`, `date`, `label`, `type` (`page change`, `site expansion`, `public signal`, `release`), `title`, `detail`, `source`, `sourceUrl`, `evidence` (`dated capture`, `self-reported`, `public post`, `published feed`) and `note`. Page-change events also carry `before`, `after`, `beforeUrl` and `afterUrl` when readable. Events are newest-first. A missing site, feed or public lane produces no event and an explicit caveat; it is never zero-filled. The endpoint composes the existing timeline, site, source and feed builders; it does not add a second crawler.
+
+**Site graph output (`GET /api/sitegraph?url=`):** a bounded same-origin page graph with `robotsUrl`, `sitemapUrl`, `pages`, `pageTypes`, `discovered`, `fetched`, `skipped` and `notes`. It reads public HTML only, caps pages, follows same-origin links only and rejects private addresses. It is a current site-surface read, not a historical series.
+
+**Signals output (`GET /api/signals?url=`):** independent `feeds` and `jobs` lanes. Feed entries carry `title`, `url`, `publishedAt` and `summary`; a missing feed is `unavailable`, not a quiet period. Jobs carries provider, board URL, open-role count and a capped role list; it is a current ATS snapshot, not historical hiring. Neither lane is a growth metric.
+
+**Coverage gate:** `multi-source` requires page history plus two context lanes and a sampled history; `limited` means page history with thinner context; `thin` means no dated page history. The gate never implies completeness. **First-party CSV outcomes** are local-only and are not public evidence or causal proof.
 
 **Saved report output:** `{ id, savedAt, report }`. The API computes the report server-side from the URL and freezes that result; a client-supplied report object is ignored. The stored report is never recomputed on read. A save of the same `domain + path + checkedAt` is idempotent and returns the existing id.
 
@@ -128,6 +134,8 @@ Each `GrowthEvent` has `id`, `date`, `label`, `type` (`page change`, `site expan
 | Marketing brief derivation | `tests/brief.test.ts` (10 tests) |
 | Public growth documentary | `tests/documentary.test.ts` (8 tests) |
 | Growth timeline merge and boundary | `tests/growth.test.ts` (7 tests) |
+| Site graph crawler | `tests/sitegraph.test.ts` (7 tests) |
+| Public feeds and jobs | `tests/signals.test.ts` (10 tests) |
 | Price axis ladder | `tests/priceAxis.test.ts` (8 tests) |
 | Change matrix | `tests/changeMatrix.test.ts` (2 tests) |
 | HN link-match lane | `tests/mentions.test.ts` (3 tests) |
@@ -149,6 +157,8 @@ Each `GrowthEvent` has `id`, `date`, `label`, `type` (`page change`, `site expan
 UI (React) ── GET  /api/growth?url=… ────┐
            ├─ GET  /api/timeline?url=… ──┤
            ├─ GET  /api/site?url=… ──────┤
+           ├─ GET  /api/sitegraph?url=… ─┤
+           ├─ GET  /api/signals?url=… ───┤
            ├─ GET  /api/sources?url=… ───┤
            ├─ GET  /api/live?url=… ──────┤
            └─ /api/reports (CRUD) ───────┤

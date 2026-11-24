@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Capture, Change, SiteInfo, Timeline } from '../shared/timeline'
 import type { SourcesReport } from '../shared/sources'
+import type { FeedSignal } from '../shared/signals'
 import { buildGrowthTimeline, growthMarkdown, isGrowthTimeline } from '../shared/growth'
 
 const capture = (ts: string, h1: string, prices: string[]): Capture => ({
@@ -93,18 +94,39 @@ const sources: SourcesReport = {
   },
 }
 
+const feeds: FeedSignal = {
+  status: 'read',
+  entries: [
+    {
+      title: 'Release notes: September',
+      url: 'https://example.com/changelog/september',
+      publishedAt: '2025-09-01T12:00:00.000Z',
+      summary: 'A dated release entry from the site’s own feed.',
+    },
+  ],
+  note: 'Public feed read.',
+  checkedAt: '2026-01-02T00:00:00Z',
+}
+
 describe('growth timeline', () => {
-  it('merges page, site and public-launch signals newest first', () => {
-    const timeline = buildGrowthTimeline(report, site, sources)
+  it('merges page, site, public-launch and feed signals newest first', () => {
+    const timeline = buildGrowthTimeline(report, site, sources, feeds)
     expect(timeline.target).toBe('example.com/pricing')
     expect(timeline.events.map((event) => event.type)).toEqual([
+      'release',
       'site expansion',
       'public signal',
       'page change',
       'site expansion',
     ])
-    expect(timeline.counts).toEqual({ pageChanges: 1, siteAdditions: 9, publicSignals: 1 })
+    expect(timeline.counts).toEqual({
+      pageChanges: 1,
+      siteAdditions: 9,
+      publicSignals: 1,
+      releases: 1,
+    })
     expect(timeline.events.map((event) => event.source)).toEqual([
+      'Public feed',
       'Archived sitemap',
       'Hacker News',
       'Internet Archive',

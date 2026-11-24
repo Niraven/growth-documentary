@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Documentary } from '@/components/Documentary'
 import { GrowthTimelineReport } from '@/components/GrowthTimeline'
 import { OutcomesPanel } from '@/components/OutcomesPanel'
+import { SourceContextPanel } from '@/components/SourceContextPanel'
 import { Toaster, toast } from 'sonner'
 import { Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -447,6 +448,7 @@ export default function App() {
                 <nav className="report-nav" aria-label="Report sections">
                   {[
                     ['Timeline', 'growth'],
+                    ['Context', 'context'],
                     ['Narrative', 'documentary'],
                     ['Compare', 'compare'],
                     ['Evidence', 'evidence'],
@@ -468,6 +470,7 @@ export default function App() {
                   ))}
                 </nav>
                 <GrowthTimelineReport key={`${live.domain}${live.path}`} report={live} />
+                <SourceContextPanel domain={live.domain} path={live.path} />
                 <Documentary report={live} />
                 <OutcomesPanel />
                 <div className="receipts-boundary">

@@ -6,6 +6,14 @@ A growth operator preparing a positioning review needs a dated signal before a c
 
 The default report is a merged growth timeline: dated page changes, self-reported sitemap expansion and public Hacker News signals. Every event has a source link and an evidence label. The narrative is a three-act reading of the same record; it does not add a source or a claim. The site footprint sits beside the narrative as self-reported context, not traffic. Compare, charts, the matrix and the dated log are explicitly labelled as receipts below the narrative. **Copy timeline** exports the merged record, coverage and linked dates as Markdown.
 
+## Motion and atmosphere
+
+The landing hero uses the supplied 21st.dev `GlyphBackground` (WebGL glyph
+field) at low opacity behind the content. It is decorative: the canvas is
+`aria-hidden`, pointer events stay on the page, the landing content sits above
+it, and `prefers-reduced-motion` keeps it static. Report content never sits on
+the animated canvas.
+
 ## Reading contract
 
 - Show the latest comparable wording change for each field, not just the first and last strings. A headline that changes and reverts still has a history. Cite both sides.

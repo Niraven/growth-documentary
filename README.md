@@ -230,6 +230,7 @@ src/                 React 19 UI (Vite, Tailwind 4, Radix, shadcn-style primitiv
   lib/citation.ts    ready-to-paste citation
   lib/adLinks.ts     free public ad-library links (no server call)
   lib/archiveUrl.ts  fixed Wayback URL guard for the archived-page iframe
+  lib/priceAxis.ts   1/2/5 × 10^n tick ladder for the price chart
 server/
   archive.ts         archive transport: CDX + snapshots, origin-locked
   core.ts            pure extraction, diff and adaptive sampling (no HTTP)
@@ -243,7 +244,7 @@ tests/               extraction, sampling, sitemap, live, store, export, handler
 
 The API is a Vite plugin with `configureServer` **and** `configurePreviewServer`, so `pnpm dev` and `pnpm start` run identical server code. `server/core.ts`, `server/live.ts` and `server/store.ts` are framework-free and injectable.
 
-Data source: [Internet Archive Wayback Machine](https://web.archive.org/) CDX + snapshot endpoints for the timeline. The optional live check contacts the target's own host once, on demand, after `robots.txt` permits it; it never feeds the dated timeline. The browser talks only to this server.
+Data source: [Internet Archive Wayback Machine](https://web.archive.org/) CDX + snapshot endpoints for the timeline. The optional live check contacts the target's own host once, on demand, after `robots.txt` permits it; it never feeds the dated timeline. All API calls go to this server. After you press **Load archived view**, the iframe loads `web.archive.org` directly; the server never proxies that page.
 
 ### Why the Archive, not a crawler
 
@@ -260,7 +261,7 @@ Source matrix, planned adapters and the inclusion rule for adding a source: [`do
 | `pnpm dev` | Dev server with HMR and the API |
 | `pnpm build` | Type-check and build to `dist/` |
 | `pnpm start` | Serve the production build with the API |
-| `pnpm test` | 171 unit tests (vitest) |
+| `pnpm test` | 179 unit tests (vitest) |
 | `pnpm lint` | oxlint |
 | `pnpm a11y` | axe-core scan of a running build (0 violations at v0.6.0) |
 | `pnpm check` | lint + test + build |

@@ -8,7 +8,7 @@ The links are a manual research shortcut, not evidence collected by this tool.
 
 | Library | What it covers | How this app uses it | Free API? |
 |---|---|---|---|
-| [Meta Ad Library](https://www.facebook.com/ads/library/) | Facebook and Instagram ads, including active and inactive ads where the library exposes them | Opens a keyword search for the domain in a new tab | No general commercial API. Meta's [Ad Library API](https://developers.facebook.com/docs/graph-api/reference/ads_archive/) is free but covers political/issue ads and EU-delivered ads, not all US commercial ads. |
+| [Meta Ad Library](https://www.facebook.com/ads/library/) | Facebook and Instagram ads; the report's link opens the **active** ads view | Opens an active-ads keyword search for the domain in a new tab | No general commercial API. Meta's [Ad Library API](https://developers.facebook.com/docs/graph-api/reference/ads_archive/) is free but covers political/issue ads and EU-delivered ads, not all US commercial ads. |
 | [Google Ads Transparency Center](https://adstransparency.google.com/) | Search, display and YouTube advertisers, by advertiser or domain | Opens a domain search in a new tab | No official commercial API. Google publishes a political advertising dataset in BigQuery, not a general commercial ad API. |
 | [TikTok Commercial Content Library](https://library.tiktok.com/ads) | Commercial ads shown in the EU, under the DSA transparency rules | Opens an EU library search in a new tab | Public library; no general US commercial API. |
 | [LinkedIn Ad Library](https://www.linkedin.com/ad-library/) | Sponsored LinkedIn posts | Opens a keyword search in a new tab | Public search; coverage varies and there is no general commercial API. |

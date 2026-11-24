@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Capture, Change } from '../../shared/timeline'
 import { monthlyBuckets } from '../../shared/compare'
 import { Card, CardContent } from '@/components/ui/card'
+import { priceAxis } from '@/lib/priceAxis'
 
 const W = 720
 const H = 260
@@ -53,11 +54,10 @@ export function PriceTrail({
   const latest = series[series.length - 1]
   const selected = series.find((bucket) => bucket.key === selectedKey) ?? latest
 
-  // A readable axis: 4–6 ticks, top rounded up, no broken interval at the end.
-  const rough = maxValue / 4
-  const step = rough <= 25 ? 25 : rough <= 50 ? 50 : rough <= 100 ? 100 : 200
-  const axisMax = Math.max(step, Math.ceil(maxValue / step) * step)
-  const ticks = Array.from({ length: Math.floor(axisMax / step) + 1 }, (_, index) => index * step)
+  // A readable axis: 3–6 ticks on a 1/2/5 × 10^n ladder, top rounded up.
+  const axis = priceAxis(maxValue)
+  const axisMax = axis.max
+  const ticks = axis.ticks
 
   const y = (value: number) => PAD.top + (1 - value / axisMax) * plotH
 
@@ -238,12 +238,13 @@ export function PriceTrail({
             })}
 
             {[...priceChangeMonths].map((key) => {
-              const bucket = series.find((entry) => entry.key === key)
-              if (!bucket) return null
-              const cx = monthCenter(bucket.ts)
+              const ts = `${key}01000000`
+              const index = monthIndex(ts)
+              if (!Number.isInteger(index) || index < 0 || index >= totalMonths) return null
+              const cx = monthCenter(ts)
               return (
                 <g key={`change-${key}`}>
-                  <title>{`Price-change row observed in ${bucket.label}`}</title>
+                  <title>{`Price-change row observed in ${monthLabel(ts)}`}</title>
                   <polygon
                     points={`${cx},${PAD.top - 2} ${cx + 3},${PAD.top - 8} ${cx - 3},${PAD.top - 8}`}
                     fill="currentColor"
@@ -255,7 +256,7 @@ export function PriceTrail({
 
             {series.map((bucket, index) => {
               const cx = monthCenter(bucket.ts)
-              const labelEvery = series.length > 24 ? 2 : 1
+              const labelEvery = slot < 18 ? 2 : 1
               if (index % labelEvery !== 0 && index !== series.length - 1) return null
               const anchor =
                 index === series.length - 1 || cx > W - PAD.right - 10

@@ -28,11 +28,11 @@ actual reading.
 ### Changed
 
 - **Price chart rebuilt** as one bar per calendar month with one x-axis slot per
-  month. This makes empty months visible instead of compressing them away. Every
-  bar is labelled month + year, the axis uses round ticks ($0–$400 here), selected
-  bars show exact endpoint caps, and a triangle above the plot marks a month with a
-  price-change row. The band and its interpolated diagonals are gone: a range is a
-  bar, not a continuous series.
+  month. This makes empty months visible instead of compressing them away. Bars are
+  labelled month + year (alternating only when the span is too dense), the axis uses
+  round 1/2/5 ticks ($0–$400 here), selected bars show exact endpoint caps, and a
+  triangle above the plot marks a month with a price-change row. The band and its
+  interpolated diagonals are gone: a range is a bar, not a continuous series.
 - Price-change markers moved above the plot so they cannot be read as negative
   prices below $0.
 
@@ -47,8 +47,8 @@ actual reading.
 
 ### Evidence
 
-- 171 unit tests (51 core, 15 handler, 6 sitemap, 7 store, 50 live, 5 export,
-  14 contract, 16 compare, 2 citation, 3 ad-link, 2 archive-url); `pnpm check` green.
+- 179 unit tests (51 core, 15 handler, 6 sitemap, 7 store, 50 live, 5 export,
+  14 contract, 16 compare, 2 citation, 3 ad-link, 2 archive-url, 8 price-axis); `pnpm check` green.
 - axe-core WCAG 2.1 A/AA: 0 violations on the report with archived view, ad links
   and the rebuilt chart.
 - Chart, archived view, ad panel and full report reviewed at full resolution.

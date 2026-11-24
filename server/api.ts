@@ -3,6 +3,9 @@ import { buildTimeline, normaliseTarget, TimelineError, type BuildOptions } from
 import { buildSiteInfo } from './site.js'
 import { buildSiteGraph, type SiteGraphOptions } from './sitegraph.js'
 import { buildSources } from './sources.js'
+import { buildFeedSignals } from './feeds.js'
+import { buildJobsSignal } from './jobs.js'
+import type { SignalOptions } from './signal-http.js'
 import { fetchLive, type LiveOptions } from './live.js'
 import { ReportStore, defaultReportFile } from './store.js'
 import type { Timeline } from '../shared/timeline.js'
@@ -37,6 +40,8 @@ export type ApiOptions = BuildOptions & {
   live?: LiveOptions
   /** Injectable public crawler transport and limits. */
   sitegraph?: SiteGraphOptions
+  /** Public signal transport injection and limits. */
+  signals?: SignalOptions
   /** JSON body cap, for saved-report requests. */
   maxBodyBytes?: number
 }
@@ -45,7 +50,7 @@ type CacheEntry = { at: number; payload: string }
 type Bucket = { count: number; reset: number }
 type Scope = 'report' | 'site' | 'sources' | 'growth' | 'live' | 'save'
 
-const VERSION = '0.10.1'
+const VERSION = '0.11.0'
 const SAVED_ID = /^[A-Za-z0-9_-]{6,24}$/
 
 function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
@@ -95,6 +100,7 @@ export function createApi(options: ApiOptions = {}) {
     store = new ReportStore(options.storeFile ?? defaultReportFile()),
     live = {},
     sitegraph = {},
+    signals = {},
     maxBodyBytes = 16_000,
     ...buildOptions
   } = options
@@ -210,6 +216,7 @@ export function createApi(options: ApiOptions = {}) {
           { method: 'GET', path: '/api/site?url=', purpose: 'archived sitemap size' },
           { method: 'GET', path: '/api/sitegraph?url=', purpose: 'bounded public site graph' },
           { method: 'GET', path: '/api/sources?url=', purpose: 'public discussion and second archive lanes' },
+          { method: 'GET', path: '/api/signals?url=', purpose: 'public feed and job-board signals' },
           { method: 'GET', path: '/api/live?url=', purpose: 'opt-in current page read' },
           { method: 'GET', path: '/api/reports', purpose: 'saved report summaries' },
           { method: 'POST', path: '/api/reports', purpose: 'freeze a report' },
@@ -236,6 +243,7 @@ export function createApi(options: ApiOptions = {}) {
       route === '/site' ||
       route === '/sitegraph' ||
       route === '/sources' ||
+      route === '/signals' ||
       route === '/live'
     ) {
       if (method !== 'GET' && method !== 'HEAD') {
@@ -265,7 +273,7 @@ export function createApi(options: ApiOptions = {}) {
         }
         try {
           const { timeline } = await resolveTimeline(target)
-          const [site, sources] = await Promise.all([
+          const [site, sources, feeds] = await Promise.all([
             buildSiteInfo(target, {
               fetchImpl: buildOptions.fetchImpl,
               timeoutMs: buildOptions.timeoutMs,
@@ -274,8 +282,9 @@ export function createApi(options: ApiOptions = {}) {
               fetchImpl: buildOptions.fetchImpl,
               timeoutMs: buildOptions.timeoutMs,
             }),
+            buildFeedSignals(target, signals),
           ])
-          const growth = buildGrowthTimeline(timeline, site, sources)
+          const growth = buildGrowthTimeline(timeline, site, sources, feeds)
           remember(sourceCache, key, JSON.stringify(growth), cacheSize)
           res.setHeader('x-cache', 'miss')
           send(res, 200, growth, { 'cache-control': 'public, max-age=300' })
@@ -345,6 +354,32 @@ export function createApi(options: ApiOptions = {}) {
         } catch (error) {
           handleError(res, error)
         }
+        return
+      }
+
+      if (route === '/signals') {
+        if (limited(client, 'sources')) {
+          send(res, 429, { error: 'Too many source checks from this client. Wait a minute.' }, { 'retry-after': '60' })
+          return
+        }
+        const key = `signals:${cacheKeyFor(target)}`
+        const hit = cachedJson(sourceCache, key, sourceCacheTtlMs)
+        if (hit) {
+          res.setHeader('x-cache', 'hit')
+          send(res, 200, JSON.parse(hit), { 'cache-control': 'public, max-age=300' })
+          return
+        }
+        try {
+          const normalized = normaliseTarget(target)
+          const [feeds, jobs] = await Promise.all([
+            buildFeedSignals(target, signals),
+            buildJobsSignal(target, signals),
+          ])
+          const report = { domain: normalized.hostname, checkedAt: new Date().toISOString(), feeds, jobs }
+          if (feeds.status !== 'unavailable' && jobs.status !== 'unavailable') remember(sourceCache, key, JSON.stringify(report), cacheSize)
+          res.setHeader('x-cache', 'miss')
+          send(res, 200, report, { 'cache-control': feeds.status === 'unavailable' || jobs.status === 'unavailable' ? 'no-store' : 'public, max-age=300' })
+        } catch (error) { handleError(res, error) }
         return
       }
 
@@ -489,7 +524,7 @@ export function createApi(options: ApiOptions = {}) {
     }
 
     send(res, 404, {
-      error: 'Unknown endpoint. Use /api/growth, /api/timeline, /api/site, /api/sitegraph, /api/sources, /api/live or /api/reports.',
+      error: 'Unknown endpoint. Use /api/growth, /api/timeline, /api/site, /api/sitegraph, /api/sources, /api/signals, /api/live or /api/reports.',
     })
   }
 }

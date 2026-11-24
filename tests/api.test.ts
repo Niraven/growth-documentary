@@ -73,7 +73,7 @@ describe('api handler', () => {
     await api(req, res)
     expect(state.status).toBe(200)
     expect(JSON.parse(state.body).ok).toBe(true)
-    expect(JSON.parse(state.body).version).toBe('0.10.1')
+    expect(JSON.parse(state.body).version).toBe('0.11.0')
   })
 
   it('describes the API at the root', async () => {
@@ -83,8 +83,9 @@ describe('api handler', () => {
     expect(state.status).toBe(200)
     const body = JSON.parse(state.body) as { name: string; endpoints: unknown[] }
     expect(body.name).toBe('growth-documentary')
-    expect(body.endpoints).toHaveLength(11)
+    expect(body.endpoints).toHaveLength(12)
     expect(body.endpoints).toContainEqual(expect.objectContaining({ path: '/api/sitegraph?url=' }))
+    expect(body.endpoints).toContainEqual(expect.objectContaining({ path: '/api/signals?url=' }))
   })
 
   it('returns and caches a site graph', async () => {
@@ -101,6 +102,23 @@ describe('api handler', () => {
     const second = fakeExchange('/sitegraph?url=example.com')
     await api(second.req, second.res)
     expect(second.state.headers['x-cache']).toBe('hit')
+  })
+
+  it('composes signal lanes and does not cache an unavailable lane', async () => {
+    const fetchImpl: FetchLike = async (url) => {
+      if (url.endsWith('/robots.txt')) return { ok: false, status: 404, text: async () => '', json: async () => null }
+      if (url === 'https://example.com/') return { ok: true, status: 200, text: async () => '<a href="https://jobs.lever.co/acme">Jobs</a>', json: async () => null }
+      if (url.includes('api.lever.co')) return { ok: true, status: 200, text: async () => '[]', json: async () => [] }
+      return { ok: false, status: 503, text: async () => '', json: async () => null }
+    }
+    const api = createApi({ signals: { fetchImpl, lookupImpl: async () => [{ address: '8.8.8.8', family: 4 }] } })
+    for (let i = 0; i < 2; i++) {
+      const { req, res, state } = fakeExchange('/signals?url=example.com')
+      await api(req, res)
+      expect(state.status).toBe(200)
+      expect(state.headers['x-cache']).toBe('miss')
+      expect(JSON.parse(state.body)).toMatchObject({ feeds: { status: 'unavailable' }, jobs: { status: 'empty', openRoles: 0 } })
+    }
   })
 
   it('returns site info and caches it', async () => {

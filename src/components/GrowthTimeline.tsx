@@ -149,6 +149,7 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
     sampled: current.coverage.sampled,
     listed: current.coverage.listed,
   })
+  const caveats = [...new Set([...current.caveats, ...coverage.caveats])]
 
   const copy = async () => {
     setCopying(true)
@@ -172,15 +173,29 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
             and public signals. A missing lane is unread, not zero.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge variant={coverage.level === 'strong' ? 'good' : coverage.level === 'thin' ? 'warn' : 'outline'}>
-              {coverage.level} public record
-            </Badge>
-            <span className="text-[11px] text-muted-foreground">
-              {coverage.sourceCount} source famil{coverage.sourceCount === 1 ? 'y' : 'ies'} ·{' '}
-              {coverage.counts.sampled} of {coverage.counts.listed} captures sampled
-            </span>
+            {growth ? (
+              <>
+                <Badge
+                  variant={
+                    coverage.level === 'strong'
+                      ? 'good'
+                      : coverage.level === 'thin'
+                        ? 'warn'
+                        : 'outline'
+                  }
+                >
+                  {coverage.level} public record
+                </Badge>
+                <span className="text-[11px] text-muted-foreground">
+                  {coverage.sourceCount} source famil{coverage.sourceCount === 1 ? 'y' : 'ies'} ·{' '}
+                  {coverage.counts.sampled} of {coverage.counts.listed} captures sampled
+                </span>
+              </>
+            ) : (
+              <Badge variant="outline">{failed ? 'coverage unread' : 'reading coverage'}</Badge>
+            )}
           </div>
-          {coverage.level === 'thin' && (
+          {growth && coverage.level === 'thin' && (
             <p className="mt-3 rounded-lg border border-dashed border-border px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
               Not enough dated public history for a confident narrative. The events below are what
               was actually readable; the gate does not fill the gaps.
@@ -262,7 +277,7 @@ export function GrowthTimelineReport({ report }: { report: Timeline }) {
           What this timeline does not prove
         </summary>
         <ul className="mt-3 space-y-1.5 text-[12px] leading-relaxed text-muted-foreground">
-          {current.caveats.map((caveat) => (
+          {caveats.map((caveat) => (
             <li key={caveat}>· {caveat}</li>
           ))}
         </ul>

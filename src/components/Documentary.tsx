@@ -85,7 +85,18 @@ function Scene({
 export function Documentary({ report }: { report: Timeline }) {
   const story = growthDocumentary(report)
   const { opening, closing } = story
-  let sceneNumber = 0
+  const numberedChapters = story.chapters.map((chapter, chapterIndex) => ({
+    ...chapter,
+    scenes: chapter.scenes.map((scene, sceneIndex) => ({
+      scene,
+      number:
+        story.chapters
+          .slice(0, chapterIndex)
+          .reduce((total, previous) => total + previous.scenes.length, 0) +
+        sceneIndex +
+        1,
+    })),
+  }))
 
   return (
     <section
@@ -124,23 +135,20 @@ export function Documentary({ report }: { report: Timeline }) {
               </span>
             </div>
             {story.chapters.length > 0 ? (
-              story.chapters.map((chapter) => (
+              numberedChapters.map((chapter) => (
                 <section key={chapter.year} className="documentary-chapter">
                   <div className="documentary-chapter-heading">
                     <h3>{chapter.year}</h3>
                     <span>{chapter.period}</span>
                   </div>
                   <ol>
-                    {chapter.scenes.map((scene) => {
-                      sceneNumber += 1
-                      return (
-                        <Scene
-                          key={`${scene.change.ts}-${scene.change.field}`}
-                          scene={scene}
-                          index={sceneNumber}
-                        />
-                      )
-                    })}
+                    {chapter.scenes.map(({ scene, number }) => (
+                      <Scene
+                        key={`${scene.change.ts}-${scene.change.field}`}
+                        scene={scene}
+                        index={number}
+                      />
+                    ))}
                   </ol>
                 </section>
               ))

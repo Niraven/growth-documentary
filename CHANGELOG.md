@@ -4,6 +4,54 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-11-24
+
+A marketing-first report surface on the same dated archive evidence.
+
+### Added
+
+- **Marketing brief.** The report opens with a factual takeaway, exact before/after
+  wording, monthly-range endpoints, per-row dated archive links, and a clear
+  distinction between the latest readable capture and a movement. **Copy brief**
+  exports the takeaway, scope, coverage, observations and sources as Markdown.
+- **Explicit reading scopes.** The brief uses the latest comparable change for each
+  field; Compare starts with the earliest and latest readable captures and names
+  that pair. The brief uses monthly amounts only; Compare quotes every archived
+  price string exactly, including annual, per-seat and one-time amounts.
+- **Landing receipt.** The landing sample now shows a real linked Basecamp headline
+  and monthly-price read instead of a generic preview.
+- **Chart keys and matrix controls.** The price chart labels range bars,
+  price-string changes and the selected month; the matrix defines observation
+  counts, reports its month span, keeps field labels visible and provides scroll
+  controls.
+- **Actionable evidence.** HN story titles are links, the lane offers a clearly
+  labelled broader host search, and the manual ad libraries remain outbound links.
+- **Mobile controls.** A two-column action grid, 44px targets, local disclosure
+  chevrons and reduced-motion support replace the cramped utility row.
+- **Design record and checks.** `docs/DESIGN.md` records what was adopted or
+  rejected from the six named design references. `scripts/brief-qa.mjs` verifies
+  the rendered brief against the API; the mobile axe check is documented.
+
+### Changed
+
+- The report hierarchy is now “What moved” first, then Compare, the evidence
+  record, changes, and public context. The visual system is a neutral zinc field
+  receipt with opaque surfaces and solid primary buttons.
+- No server extraction, archive, source or privacy behaviour changed in this
+  release. The version and archive user agent are now 0.8.
+
+### Evidence
+
+- 200 unit tests across 17 files: the previous 189 plus 10 brief tests and one
+  additional compare test. `pnpm check`, lint, test and production build pass.
+- axe-core WCAG 2.1 A/AA: 0 violations at desktop 1280 and mobile 390 on the live
+  Basecamp report; no horizontal page overflow.
+- Live `basecamp.com/pricing`: 17 of 392 listed captures, 10 field changes, 24
+  months; the brief’s copied Markdown, Compare date changes, matrix scrolling and
+  story links were exercised against the real report.
+- Screenshots: `docs/brief-v08/` (desktop and mobile landing, brief, compare,
+  charts, matrix, evidence, changes and stories).
+
 ## [0.7.0] — 2026-11-24
 
 A report that shows more of the public web, while keeping the dated page evidence
@@ -300,6 +348,7 @@ First public release. A dated, sourced record of what changed on a public page.
 - Live run at release: `basecamp.com/pricing` → 12 readable captures, 6 change rows.
 - Independent review approved the release commit (parse5 extraction).
 
+[0.8.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.8.0
 [0.7.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.7.0
 [0.6.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.6.0
 [0.5.0]: https://github.com/Niraven/growth-documentary/releases/tag/v0.5.0

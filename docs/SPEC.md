@@ -1,6 +1,6 @@
 # Product spec — Growth Documentary
 
-Status: implemented (v0.7.0). This file is the contract; the README explains usage.
+Status: implemented (v0.8.0). This file is the contract; the README explains usage.
 
 ## Problem
 
@@ -91,7 +91,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 - HTML only, 2 MB cap, 15 s budget, no cookies, no credentials, no JavaScript, no retries.
 - The live page is read once per click; no automatic refresh.
 
-**Non-goals (v0.7)**
+**Non-goals (v0.8)**
 
 - Pixel-level visual diffs of arbitrary pages. The archived page view renders
   archived HTML; it does not compare pixels or claim a visual change.
@@ -114,7 +114,8 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | Live read guards | `tests/live.test.ts` (50 tests) |
 | CSV/JSON export | `tests/export.test.ts` (5 tests) |
 | Contract guards and comparison | `tests/contract.test.ts` (14 tests) |
-| Compare, word/char diff, monthly range | `tests/compare.test.ts` (16 tests) |
+| Compare, word/char diff, monthly range | `tests/compare.test.ts` (17 tests) |
+| Marketing brief and copied Markdown | `tests/brief.test.ts` (10 tests) |
 | Price axis ladder | `tests/priceAxis.test.ts` (8 tests) |
 | Change matrix | `tests/changeMatrix.test.ts` (2 tests) |
 | HN link-match lane | `tests/mentions.test.ts` (3 tests) |
@@ -124,7 +125,8 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | Ad links | `tests/adlinks.test.ts` (3 tests) |
 | Citation text | `tests/citation.test.ts` (2 tests) |
 | Type-check + production build | `pnpm build` |
-| Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 field changes, 24 months |
+| Live report | 24 Nov 2026: `?url=basecamp.com/pricing` → 17 of 392 listed captures, 10 field changes, 24 months; brief copy verified against the timeline |
+| Design and accessibility | `docs/DESIGN.md`; axe-core WCAG 2.1 A/AA: 0 violations at desktop 1280 and mobile 390 |
 | Saved report | 24 Nov 2026: save → list → reopen `#report/<id>` → delete, all through the HTTP API |
 | Live check | 24 Nov 2026: `basecamp.com/pricing` → 200, `robots: allowed`, current title/headline/prices |
 | Keyboard and labels | axe-core WCAG 2.1 A/AA: 0 violations on landing, saved report and saved list |

@@ -289,7 +289,9 @@ export function createApi(options: ApiOptions = {}) {
             fetchImpl: buildOptions.fetchImpl,
             timeoutMs: buildOptions.timeoutMs,
           })
-          remember(sourceCache, key, JSON.stringify(sources), cacheSize)
+          if (sources.mentions.status !== 'unavailable' && sources.archives.status !== 'unavailable') {
+            remember(sourceCache, key, JSON.stringify(sources), cacheSize)
+          }
           res.setHeader('x-cache', 'miss')
           send(res, 200, sources, { 'cache-control': 'public, max-age=300' })
         } catch (error) {

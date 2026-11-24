@@ -27,8 +27,7 @@ separate from the context.
   with explicit statuses and notes.
 - **Change matrix.** A calendar heatmap of page-title, headline and price-string
   observations by month. The baseline is excluded; empty months stay visible.
-- **Mentions chart.** Monthly matched-story counts over the last 24 months, tied
-  to the cited story list.
+- **Mentions chart.** Monthly matched-story counts over the last 25 calendar months, tied to the cited story list.
 
 ### Changed
 
@@ -38,9 +37,9 @@ separate from the context.
 
 ### Evidence
 
-- 188 unit tests: 51 core, 16 handler, 6 sitemap, 7 store, 50 live, 5 export,
+- 189 unit tests: 51 core, 16 handler, 6 sitemap, 7 store, 50 live, 5 export,
   14 contract, 16 compare, 2 citation, 3 ad-link, 2 archive-url, 8 price-axis,
-  3 mentions, 2 Arquivo, 1 source router, 2 change-matrix.
+  3 mentions, 2 Arquivo, 2 source router, 2 change-matrix.
 - `pnpm check` green; independent review of the exact release tree.
 - axe-core WCAG 2.1 A/AA: 0 violations on the report.
 - Live source check: `basecamp.com/pricing` → 17 HN stories, Arquivo.pt estimate

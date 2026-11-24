@@ -39,7 +39,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 - **Monthly price range:** one bar per calendar month in which monthly (`/mo`, `/month`) price strings were read. The x-axis keeps one slot per month, so empty months are visible gaps. Each bar is the min–max of those strings; annual, one-time and per-seat amounts are excluded. A triangle above the plot marks a month with a price-change row. With fewer than two such months the chart is not rendered.
 - **Change matrix:** one cell per field (`title`, `headline`, `price`) per calendar month, baseline excluded. Empty months stay visible. Shade encodes the number of observations in that field/month, not a price, a trend or a growth rate.
 - **Evidence lanes:** independent public lanes for Internet Archive (dated page evidence), Arquivo.pt (second archive index), Hacker News (public stories whose submitted URL host matches the target), sitemap (page count), and ad libraries (manual links). A lane is `read`, `no rows` or `unread`; an unavailable lane is never a zero. Only the Internet Archive lane feeds the dated changes.
-- **Mentions chart:** monthly count of matched HN stories over the last 24 months, with the top stories linked. It is public discussion, not a truth score or a complete count.
+- **Mentions chart:** monthly count of matched HN stories over the last 25 calendar months, with the top stories linked. It is public discussion, not a truth score or a complete count.
 - **Archived page view:** an opt-in sandboxed iframe of the selected capture's `web.archive.org` URL. It is a rendering of archived HTML, not a pixel screenshot, and creates no new claim. No server-side browser, no screenshot service, no proxying.
 - **Ad libraries:** four external, pre-filled links to public ad libraries (Meta, Google, TikTok, LinkedIn). The server never fetches them. They are not evidence rows and do not imply spend. There is no free official API for general US commercial ads; an optional licensed provider is the only future automatic path.
 - **Citation:** coverage window, captures read, field changes (baseline excluded), access date, source link.
@@ -119,7 +119,7 @@ When I need to show what a competitor changed on a public page, I want a dated l
 | Change matrix | `tests/changeMatrix.test.ts` (2 tests) |
 | HN link-match lane | `tests/mentions.test.ts` (3 tests) |
 | Arquivo.pt index lane | `tests/arquivo.test.ts` (2 tests) |
-| Source-lane router | `tests/sources.test.ts` (1 test) |
+| Source-lane router | `tests/sources.test.ts` (2 tests) |
 | Archived URL guard | `tests/archiveUrl.test.ts` (2 tests) |
 | Ad links | `tests/adlinks.test.ts` (3 tests) |
 | Citation text | `tests/citation.test.ts` (2 tests) |

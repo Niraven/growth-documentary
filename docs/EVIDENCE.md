@@ -80,7 +80,7 @@ tests.
 - **Change matrix:** one cell per field per calendar month; the baseline is excluded.
   Darker means more observations in that month, not a larger price or a growth rate.
 - **Site size:** sitemap page count and dated additions; `lastmod` is self-reported.
-- **Mentions:** monthly count of matched public HN stories over the last 24 months;
+- **Mentions:** monthly count of matched public HN stories over the last 25 calendar months;
   bars sum to the matched total. A month with no bar is a month with no matched story,
   not proof that no one discussed the company.
 - **Price axis:** 1/2/5 × 10^n ticks, so a page in the thousands stays readable.

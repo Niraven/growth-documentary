@@ -42,6 +42,11 @@ const statusCopy: Record<SourceStatus, { label: string; variant: 'good' | 'outli
   unavailable: { label: 'unread', variant: 'warn' },
 }
 
+const pendingStatus: { label: string; variant: 'good' | 'outline' | 'warn' } = {
+  label: 'reading',
+  variant: 'outline',
+}
+
 function Lane({
   icon,
   title,
@@ -105,7 +110,7 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
 
   const mentions = sources?.mentions
   const archives = sources?.archives
-  const mentionMonths = lastMonths(24)
+  const mentionMonths = lastMonths(25)
   const counts = new Map(mentions?.months.map((month) => [month.month, month.count]) ?? [])
   const peak = Math.max(1, ...mentionMonths.map((month) => counts.get(month) ?? 0))
   const adLinks = adLibraryLinks(timeline.domain)
@@ -122,7 +127,8 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
           </h3>
         </div>
         <p className="max-w-md text-right text-[11px] leading-relaxed text-muted-foreground">
-          Each lane is read separately. A missing answer stays unread — never a zero.
+          Each lane is read separately. A missing answer stays unread — never a zero. Lanes are
+          checked now; only the Wayback timeline is frozen in a saved report.
         </p>
       </div>
 
@@ -149,7 +155,7 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
         <Lane
           icon={<Globe2 className="size-3.5" />}
           title="Arquivo.pt"
-          status={archives ? statusCopy[archives.status] : failed ? statusCopy.unavailable : statusCopy.empty}
+          status={archives ? statusCopy[archives.status] : failed ? statusCopy.unavailable : pendingStatus}
           footer={
             <p className="text-[10.5px] leading-snug text-muted-foreground">
               {archives?.note ?? (failed ? 'Second archive check did not finish.' : 'Reading a second public archive…')}
@@ -185,7 +191,7 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
         <Lane
           icon={<MessagesSquare className="size-3.5" />}
           title="Hacker News"
-          status={mentions ? statusCopy[mentions.status] : failed ? statusCopy.unavailable : statusCopy.empty}
+          status={mentions ? statusCopy[mentions.status] : failed ? statusCopy.unavailable : pendingStatus}
           footer={
             <p className="text-[10.5px] leading-snug text-muted-foreground">
               {mentions?.note ?? (failed ? 'Public-discussion check did not finish.' : 'Reading public story titles…')}
@@ -201,7 +207,7 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
                 {mentionMonths.map((month) => {
                   const count = counts.get(month) ?? 0
                   return (
-                    <div key={month} className="flex-1" title={`${shortMonth(month)}: ${count} story${count === 1 ? '' : 's'}`}>
+                    <div key={month} className="flex-1" title={`${shortMonth(month)}: ${count} ${count === 1 ? 'story' : 'stories'}`}>
                       <div
                         className={count > 0 ? 'w-full rounded-t-[2px] bg-foreground/55' : 'w-full rounded-t-[2px] bg-border'}
                         style={{ height: `${count > 0 ? Math.max(5, (count / peak) * 44) : 2}px` }}
@@ -215,8 +221,9 @@ export function SourcesBoard({ timeline }: { timeline: Timeline }) {
                 <span>{shortMonth(mentionMonths[mentionMonths.length - 1])}</span>
               </div>
               <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
-                Monthly count; bars sum to {mentions.total} across {mentions.months.length} month
-                {mentions.months.length === 1 ? '' : 's'} with at least one story.
+                Monthly count over the last 25 calendar months; bars sum to {mentions.total} across{' '}
+                {mentions.months.length} month{mentions.months.length === 1 ? '' : 's'} with at
+                least one story.
               </p>
             </>
           ) : (

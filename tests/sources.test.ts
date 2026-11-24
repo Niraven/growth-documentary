@@ -50,4 +50,15 @@ describe('buildSources', () => {
     expect(report.mentions.total).toBe(1)
     expect(report.archives.count).toBe(1)
   })
+
+  it('isolates a failed Hacker News lane from a readable archive lane', async () => {
+    const failing: FetchLike = async (url) => {
+      if (url.includes('hn.algolia.com')) throw new Error('HN down')
+      return fake(url)
+    }
+    const report = await buildSources('basecamp.com/pricing', { fetchImpl: failing })
+    expect(report.mentions.status).toBe('unavailable')
+    expect(report.archives.status).toBe('read')
+    expect(report.mentions.note).toMatch(/unread, not zero/)
+  })
 })

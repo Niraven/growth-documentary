@@ -60,8 +60,8 @@ export function ChangeMatrix({ captures, changes }: { captures: Capture[]; chang
               >
                 <title>Field changes by calendar month</title>
                 {matrix.months.map((month, index) => {
-                  if (index % 3 !== 0) return null
-                  const x = LABEL_W + index * slot + cellW / 2
+                  if (index % 3 !== 0 && index !== matrix.months.length - 1) return null
+                  const x = LABEL_W + index * slot + 1.5 + cellW / 2
                   return (
                     <g key={`label-${month.key}`}>
                       <text

@@ -61,7 +61,7 @@ export async function buildArquivoInfo(
     const response = await fetchImpl(url.toString(), {
       signal: controller.signal,
       headers: { 'user-agent': USER_AGENT },
-      redirect: 'follow',
+      redirect: 'manual',
     })
     if (!response.ok) {
       return empty('unavailable', `Arquivo.pt answered ${response.status}. This lane is unread, not zero.`)
@@ -97,7 +97,7 @@ export async function buildArquivoInfo(
     if (unique.length === 0) {
       return empty(
         'empty',
-        'Arquivo.pt lists no captures for this host. This lane is empty, not proof the page never existed.',
+        'Arquivo.pt lists no captures for this exact URL. This lane is empty, not proof the page never existed.',
       )
     }
 

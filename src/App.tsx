@@ -6,6 +6,7 @@ import { OutcomesPanel } from '@/components/OutcomesPanel'
 import { Toaster, toast } from 'sonner'
 import { Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { GlyphBackground } from '@/components/ui/backgrounds-glyph'
 import { Separator } from '@/components/ui/separator'
 import {
   isErrorBody,
@@ -405,19 +406,21 @@ export default function App() {
                 </div>
               </>
             ) : (
-              <section className="landing">
-                <div>
-                  <span className="metadata">Open-source growth tool</span>
-                  <h1>Reconstruct a company’s public growth.</h1>
-                  <p className="intro">
-                    Build a dated, sourced growth timeline: what changed on the offer page, when the
-                    site expanded, and when the company appeared in public discussion. Then read the
-                    same record as a short narrative.
-                  </p>
-                  {targetForm}
-                </div>
-                {!loading && <EmptyState />}
-              </section>
+              <GlyphBackground className="isolate h-auto [&_canvas]:opacity-20">
+                <section className="landing relative z-10">
+                  <div>
+                    <span className="metadata">Open-source growth tool</span>
+                    <h1>Reconstruct a company’s public growth.</h1>
+                    <p className="intro">
+                      Build a dated, sourced growth timeline: what changed on the offer page, when the
+                      site expanded, and when the company appeared in public discussion. Then read the
+                      same record as a short narrative.
+                    </p>
+                    {targetForm}
+                  </div>
+                  {!loading && <EmptyState />}
+                </section>
+              </GlyphBackground>
             )}
             {loading && <LiveLoading domain={domain} />}
             {error && (
